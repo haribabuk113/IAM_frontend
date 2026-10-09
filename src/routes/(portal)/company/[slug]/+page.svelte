@@ -58,7 +58,8 @@
           src={company.cover}
           alt={`${company.name} cover`}
         />{:else}<h2>Different people.<br />Shared possibilities.</h2>
-        <span></span><Companion kind="sage" size={205} />{/if}
+        <span class="company_cover_arch" aria-hidden="true"></span>
+        <Companion kind="sage" size={205} />{/if}
     </div>
     <div class="company_identity_panel">
       <div class="person_line">

@@ -4,6 +4,13 @@
 .portal [id] {
   scroll-margin-top: calc(var(--navigation_height) + 20px);
 }
+.profile_sidebar > * {
+  min-width: 0;
+}
+.profile_sidebar input[type="file"] {
+  width: 100%;
+  min-width: 0;
+}
 .unified_header {
   position: sticky;
   top: 0;
@@ -86,6 +93,7 @@
   border-radius: 9px;
   color: white !important;
   font-weight: 600;
+  white-space: nowrap;
 }
 .unified_toggle {
   display: none;
@@ -652,13 +660,15 @@
   padding: 40px 46px;
 }
 .company_cover h2 {
+  position: relative;
+  z-index: 1;
   color: white;
   font-size: 38px;
   line-height: 1.05;
   margin: 0;
   letter-spacing: -0.05em;
 }
-.company_cover > span {
+.company_cover_arch {
   position: absolute;
   width: 230px;
   height: 300px;
@@ -669,9 +679,9 @@
   transform: rotate(20deg);
 }
 .company_cover .career_companion {
-  position: relative;
-  align-self: flex-end;
-  margin-bottom: -40px;
+  position: absolute;
+  right: 30px;
+  bottom: 0;
 }
 .company_identity_panel {
   position: relative;
@@ -692,6 +702,10 @@
 .company_identity_panel p {
   margin: 0 0 10px;
   color: #636e88;
+}
+.company_identity_panel .person_line > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .company_page_tabs {
   margin: 12px 20px 24px;
@@ -958,10 +972,17 @@
     grid-template-columns: 170px minmax(0, 1fr);
   }
   .stat_grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 850px) {
+  .company_cover {
+    padding: 28px;
+  }
+  .company_cover h2 {
+    font-size: 32px;
+    max-width: calc(100% - 220px);
+  }
   .portal {
     --navigation_height: 77px;
   }
@@ -1142,13 +1163,21 @@
     padding: 25px;
   }
   .company_cover h2 {
-    font-size: 28px;
-    max-width: 210px;
+    font-size: clamp(22px, 5.7vw, 28px);
+    max-width: calc(100% - 90px);
+    line-height: 1.15;
+  }
+  .company_cover_arch {
+    width: 140px;
+    height: 180px;
+    border-width: 22px;
+    right: -20px;
+    top: 22px;
   }
   .company_cover .career_companion {
     width: 115px !important;
-    margin-right: -25px;
-    margin-bottom: -25px;
+    right: 0;
+    bottom: 8px;
   }
   .company_identity_panel {
     padding: 21px;
@@ -1194,6 +1223,31 @@
   .career_start_card:hover,
   .directory_card:hover {
     transform: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .stat_card {
+    padding: 14px;
+  }
+  .stat_card strong {
+    font-size: 22px;
+  }
+  .unified_nav {
+    width: calc(100% - 32px);
+    gap: 8px;
+  }
+  .unified_header .portal_logo {
+    font-size: 22px;
+    gap: 6px;
+  }
+  .unified_actions {
+    gap: 4px;
+  }
+  .unified_post {
+    gap: 6px;
+    padding: 10px;
+    font-size: 12px;
   }
 }
 
