@@ -1,4 +1,5 @@
 <script>
+  import { keep_active_visible } from "$lib/portal/keep_active_visible.js";
   import { closed_job_ids } from "$lib/portal/workspace_state.js";
   import { page } from "$app/stores";
   import {
@@ -67,8 +68,10 @@
         <div>
           <h1>{company.name}</h1>
           <p>{company.tagline}</p>
-          <span class="workspace_badge">{company.sector}</span>
-          <span class="workspace_badge neutral">{company.location}</span>
+          <div class="company_meta">
+            <span class="workspace_badge">{company.sector}</span>
+            <span class="workspace_badge neutral">{company.location}</span>
+          </div>
         </div>
       </div>
       <div class="workspace_actions">
@@ -87,7 +90,11 @@
           >{/if}
       </div>
     </div>
-    <nav class="workspace_tabs company_page_tabs" aria-label="Company sections">
+    <nav
+      class="workspace_tabs company_page_tabs"
+      use:keep_active_visible={tab}
+      aria-label="Company sections"
+    >
       {#each [["overview", "Overview"], ["jobs", "Jobs"], ["culture", "Culture & benefits"], ["products", "Products"], ["team", "Team"]] as [key, label]}<a
           class:active={tab === key}
           aria-current={tab === key ? "page" : undefined}
@@ -235,7 +242,7 @@
               class="workspace_panel"
             >
               <h2>Room to do your best work.</h2>
-              <div class="workspace_list">
+              <div class="workspace_list company_benefits">
                 {#each company.benefits || [] as benefit}<div>
                     <span class="person_initials">✳</span>
                     <div>

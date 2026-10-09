@@ -1,4 +1,5 @@
 <script>
+  import { focus_feedback } from "./focus_feedback.js";
   import Heading from "./page_heading.svelte";
   import Companion from "./companion.svelte";
   import { landing_faqs } from "./landing_content.js";
@@ -167,7 +168,11 @@
     </div>
   {:else if kind === "contact"}<div class="workspace_grid">
       <section class="workspace_panel">
-        {#if submitted}<div class="review_success">
+        {#if submitted}<div
+            class="review_success feedback_panel"
+            tabindex="-1"
+            use:focus_feedback
+          >
             <span class="workspace_badge green">MESSAGE PREVIEW</span>
             <h2>Thanks for sharing your thoughts.</h2>
             <p>

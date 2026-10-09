@@ -1,4 +1,5 @@
 <script>
+  import { keep_active_visible } from "$lib/portal/keep_active_visible.js";
   import { page } from "$app/stores";
   import {
     recruitment_jobs,
@@ -78,11 +79,12 @@
         : "Keep your roles, applications and next steps moving together."}
   /><Notice />
   <div class="workspace_shell">
-    <aside class="workspace_sidenav">
+    <aside class="workspace_sidenav" use:keep_active_visible={section}>
       <span>HIRING</span
       >{#each [["overview", "Overview", "/recruiter", "grid"], ["jobs", "Manage jobs", "/recruiter/jobs", "briefcase"], ["applicants", "Applicants", "/recruiter/applicants", "users"]] as [key, label, href, icon]}<a
           {href}
           class:active={section === key}
+          aria-current={section === key ? "page" : undefined}
           ><Icon name={icon} size={17} />{label}</a
         >{/each}<a href="/recruiter/post-job"
         ><Icon name="plus" size={17} />Post a job</a
@@ -109,7 +111,7 @@
               <h2>Move a good conversation forward.</h2>
               <a href="/recruiter/applicants">View applicants ↗</a>
             </div>
-            <div class="workspace_list">
+            <div class="workspace_list candidate_summary_list">
               {#each $candidate_records.slice(0, 3) as person}<div>
                   <span class="person_initials">{initials(person.name)}</span>
                   <div class="list_body">
@@ -167,37 +169,48 @@
                   ></thead
                 ><tbody
                   >{#each listed as job}<tr
-                      ><td
-                        ><strong>{job.title || "Untitled draft"}</strong><small
-                          >{job.tier} · {job.company_name ||
-                            $company_records.find((c) => c.id === job.company)
-                              ?.name ||
-                            "Confidential"}</small
-                        ></td
-                      ><td
-                        ><span
-                          class="workspace_badge"
-                          class:neutral={job.status !== "Active"}
-                          >{job.status}</span
-                        ></td
-                      ><td
-                        ><a href={`/recruiter/applicants?job=${job.id}`}
-                          >{job.applicants || 0} ↗</a
-                        ></td
-                      ><td>{job.views || 0}</td><td
-                        ><a
-                          class="text_action"
-                          href={`/recruiter/post-job?edit=${job.id}`}>Edit</a
-                        >
-                        ·
-                        <a
-                          href={job.id.startsWith("draft-")
-                            ? `/recruiter/jobs/${job.id}`
-                            : `/jobs/${job.id}`}>View</a
-                        >{#if job.status === "Active" || job.status === "Preview"}<button
+                      ><td data-label="Role"
+                        ><div class="table_cell_value">
+                          <strong>{job.title || "Untitled draft"}</strong><small
+                            >{job.tier} · {job.company_name ||
+                              $company_records.find((c) => c.id === job.company)
+                                ?.name ||
+                              "Confidential"}</small
+                          >
+                        </div></td
+                      ><td data-label="Status"
+                        ><div class="table_cell_value">
+                          <span
+                            class="workspace_badge"
+                            class:neutral={job.status !== "Active"}
+                            >{job.status}</span
+                          >
+                        </div></td
+                      ><td data-label="Applications"
+                        ><div class="table_cell_value">
+                          <a href={`/recruiter/applicants?job=${job.id}`}
+                            >{job.applicants || 0} ↗</a
+                          >
+                        </div></td
+                      ><td data-label="Views"
+                        ><div class="table_cell_value">
+                          {job.views || 0}
+                        </div></td
+                      ><td data-label="Actions"
+                        ><div class="table_cell_value">
+                          <a
                             class="text_action"
-                            on:click={() => (closing = job)}>Close</button
-                          >{/if}</td
+                            href={`/recruiter/post-job?edit=${job.id}`}>Edit</a
+                          >
+                          <a
+                            href={job.id.startsWith("draft-")
+                              ? `/recruiter/jobs/${job.id}`
+                              : `/jobs/${job.id}`}>View</a
+                          >{#if job.status === "Active" || job.status === "Preview"}<button
+                              class="text_action"
+                              on:click={() => (closing = job)}>Close</button
+                            >{/if}
+                        </div></td
                       ></tr
                     >{/each}</tbody
                 >
@@ -256,39 +269,51 @@
                   ></thead
                 ><tbody
                   >{#each applicants as person}<tr
-                      ><td
-                        ><div class="person_line">
-                          <span class="person_initials"
-                            >{initials(person.name)}</span
-                          >
-                          <div>
-                            <strong>{person.name}</strong><small
-                              >{person.title}</small
+                      ><td data-label="Candidate"
+                        ><div class="table_cell_value">
+                          <div class="person_line">
+                            <span class="person_initials"
+                              >{initials(person.name)}</span
                             >
+                            <div>
+                              <strong>{person.name}</strong><small
+                                >{person.title}</small
+                              >
+                            </div>
                           </div>
                         </div></td
-                      ><td
-                        >{person.experience} years<small
-                          >{person.location}</small
-                        ></td
-                      ><td>{inr(person.expected)}<small>per year</small></td><td
-                        >{person.notice}</td
-                      ><td
-                        ><select
-                          aria-label={`Stage for ${person.name}`}
-                          value={person.stage}
-                          on:change={(e) =>
-                            set_stage(person.id, e.currentTarget.value)}
-                          >{#each ["New", "Reviewing", "Interview", "Offer", "Hired", "Rejected"] as value}<option
-                              >{value}</option
-                            >{/each}</select
-                        ></td
-                      ><td
-                        ><button
-                          class="text_action"
-                          on:click={() => (candidate = person)}
-                          >View dossier ↗</button
-                        ></td
+                      ><td data-label="Experience / location"
+                        ><div class="table_cell_value">
+                          {person.experience} years<small
+                            >{person.location}</small
+                          >
+                        </div></td
+                      ><td data-label="Expected salary"
+                        ><div class="table_cell_value">
+                          {inr(person.expected)}<small>per year</small>
+                        </div></td
+                      ><td data-label="Notice"
+                        ><div class="table_cell_value">{person.notice}</div></td
+                      ><td data-label="Stage"
+                        ><div class="table_cell_value">
+                          <select
+                            aria-label={`Stage for ${person.name}`}
+                            value={person.stage}
+                            on:change={(e) =>
+                              set_stage(person.id, e.currentTarget.value)}
+                            >{#each ["New", "Reviewing", "Interview", "Offer", "Hired", "Rejected"] as value}<option
+                                >{value}</option
+                              >{/each}</select
+                          >
+                        </div></td
+                      ><td data-label="Actions"
+                        ><div class="table_cell_value">
+                          <button
+                            class="text_action"
+                            on:click={() => (candidate = person)}
+                            >View dossier ↗</button
+                          >
+                        </div></td
                       ></tr
                     >{/each}</tbody
                 >
@@ -309,7 +334,7 @@
       Sample candidate dossier · No real candidate data
     </p>
     <div class="workspace_grid">
-      <div>
+      <div class="candidate_dossier">
         <h3>{candidate.title}</h3>
         <p>{candidate.location} · {candidate.experience} years of experience</p>
         <div class="filter_chips">
@@ -317,7 +342,7 @@
               >{skill}</span
             >{/each}
         </div>
-        <h3 style="margin-top:25px">About</h3>
+        <h3 class="dossier_about">About</h3>
         <p>
           A sample profile for reviewing the applicant experience. Portfolio,
           verified career history and attached résumé will be supplied by the

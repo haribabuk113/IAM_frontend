@@ -1,4 +1,5 @@
 <script>
+  import { focus_feedback } from "$lib/portal/focus_feedback.js";
   import { closed_job_ids } from "$lib/portal/workspace_state.js";
   import { page } from "$app/stores";
   import { onMount as on_mount } from "svelte";
@@ -70,13 +71,19 @@
       title="This role is now closed."
       text="Explore current opportunities to find your next move."
       ><a class="button button_dark" href="/jobs">Find another role</a></Empty
-    >{:else if complete || $applications.includes(job.id)}<Empty
-      title="Your application preview is saved."
-      text="You can find it in your applications. Nothing has been sent to the employer."
-      ><a class="button button_dark" href="/applications"
-        >View my applications ↗</a
-      ></Empty
-    >{:else if job.application !== "Easy apply"}<section
+    >{:else if complete || $applications.includes(job.id)}<div
+      class="feedback_panel"
+      tabindex="-1"
+      use:focus_feedback
+    >
+      <Empty
+        title="Your application preview is saved."
+        text="You can find it in your applications. Nothing has been sent to the employer."
+        ><a class="button button_dark" href="/applications"
+          >View my applications ↗</a
+        ></Empty
+      >
+    </div>{:else if job.application !== "Easy apply"}<section
       class="workspace_panel"
     >
       <h2>Continue with the employer</h2>

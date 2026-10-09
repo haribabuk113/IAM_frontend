@@ -1,4 +1,5 @@
 <script>
+  import { keep_active_visible } from "$lib/portal/keep_active_visible.js";
   import { taxonomy_entries } from "./workspace_state.js";
   import { toast } from "./state.js";
   import Heading from "./page_heading.svelte";
@@ -65,7 +66,11 @@
   /><Notice
     text="Site-admin UI preview · These controls only change sample records. Live admin tools retain their existing access checks."
   />
-  <nav class="workspace_tabs" aria-label="Platform administration">
+  <nav
+    class="workspace_tabs"
+    use:keep_active_visible={tab}
+    aria-label="Platform administration"
+  >
     {#each [["taxonomy", "Skills & designations"], ["reports", "Moderation"], ["currency", "Exchange rates"], ["identity", "Identity & access"]] as [key, label]}<button
         class:active={tab === key}
         on:click={() => (tab = key)}>{label}</button
@@ -116,44 +121,60 @@
             ></thead
           ><tbody
             >{#each $taxonomy_entries as term}<tr
-                ><td
-                  ><input
-                    type="checkbox"
-                    aria-label={`Select ${term.name}`}
-                    value={term.id}
-                    bind:group={selected}
-                    disabled={term.status !== "Pending"}
-                  /></td
-                ><td
-                  ><strong>{term.name}</strong>{#if term.master}<small
-                      >Master: {term.master}</small
-                    >{/if}</td
-                ><td>{term.kind}</td><td>{term.uses}</td><td
-                  ><span class="workspace_badge">{term.status}</span></td
-                ><td
-                  >{#if term.status === "Pending"}<button
-                      class="text_action"
-                      on:click={() =>
-                        taxonomy_entries.update((items) =>
-                          items.map((t) =>
-                            t.id === term.id ? { ...t, status: "Approved" } : t,
-                          ),
-                        )}>Approve</button
-                    ><button
-                      class="text_action"
-                      on:click={() => {
-                        editing = term;
-                        edit_name = term.name;
-                      }}>Edit</button
-                    ><button
-                      class="text_action"
-                      on:click={() =>
-                        taxonomy_entries.update((items) =>
-                          items.map((t) =>
-                            t.id === term.id ? { ...t, status: "Rejected" } : t,
-                          ),
-                        )}>Reject</button
-                    >{/if}</td
+                ><td data-label="Select"
+                  ><div class="table_cell_value">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${term.name}`}
+                      value={term.id}
+                      bind:group={selected}
+                      disabled={term.status !== "Pending"}
+                    />
+                  </div></td
+                ><td data-label="Term"
+                  ><div class="table_cell_value">
+                    <strong>{term.name}</strong>{#if term.master}<small
+                        >Master: {term.master}</small
+                      >{/if}
+                  </div></td
+                ><td data-label="Type"
+                  ><div class="table_cell_value">{term.kind}</div></td
+                ><td data-label="Usage"
+                  ><div class="table_cell_value">{term.uses}</div></td
+                ><td data-label="Status"
+                  ><div class="table_cell_value">
+                    <span class="workspace_badge">{term.status}</span>
+                  </div></td
+                ><td data-label="Actions"
+                  ><div class="table_cell_value">
+                    {#if term.status === "Pending"}<button
+                        class="text_action"
+                        on:click={() =>
+                          taxonomy_entries.update((items) =>
+                            items.map((t) =>
+                              t.id === term.id
+                                ? { ...t, status: "Approved" }
+                                : t,
+                            ),
+                          )}>Approve</button
+                      ><button
+                        class="text_action"
+                        on:click={() => {
+                          editing = term;
+                          edit_name = term.name;
+                        }}>Edit</button
+                      ><button
+                        class="text_action"
+                        on:click={() =>
+                          taxonomy_entries.update((items) =>
+                            items.map((t) =>
+                              t.id === term.id
+                                ? { ...t, status: "Rejected" }
+                                : t,
+                            ),
+                          )}>Reject</button
+                      >{/if}
+                  </div></td
                 ></tr
               >{/each}</tbody
           >
@@ -211,8 +232,14 @@
               ></thead
             ><tbody
               >{#each [["INR", 1], ["USD", 85], ["GBP", 110], ["EUR", 95]] as [currency, rate]}<tr
-                  ><td>{currency}</td><td>{rate}</td><td
-                    >Illustrative fixture</td
+                  ><td data-label="Currency"
+                    ><div class="table_cell_value">{currency}</div></td
+                  ><td data-label="Sample rate to INR"
+                    ><div class="table_cell_value">{rate}</div></td
+                  ><td data-label="Source"
+                    ><div class="table_cell_value">
+                      Illustrative fixture
+                    </div></td
                   ></tr
                 >{/each}</tbody
             >

@@ -1,4 +1,5 @@
 <script>
+  import { keep_active_visible } from "$lib/portal/keep_active_visible.js";
   import { page } from "$app/stores";
   import {
     company_records,
@@ -208,10 +209,11 @@
     text="Company admin design preview · Sample records and local actions only."
   />
   <div class="workspace_shell">
-    <aside class="workspace_sidenav">
+    <aside class="workspace_sidenav" use:keep_active_visible={section}>
       <span>COMPANY WORKSPACE</span>{#each tabs as [key, label, icon, href]}<a
           {href}
           class:active={section === key}
+          aria-current={section === key ? "page" : undefined}
           ><Icon name={icon} size={17} />{label}</a
         >{/each}<span>MAKE YOUR NEXT MOVE</span><a
         href={`/company/${company?.id}`}
@@ -223,10 +225,10 @@
       >
     </aside>
     <div class="workspace_main">
-      <div class="panel_heading">
+      <div class="panel_heading workspace_role_switch">
         <span class="workspace_badge"
           >{company?.name || "Company not found"}</span
-        ><label class="inline_fields work_note"
+        ><label class="inline_fields preview_role_field"
           >Preview as <select class="field_input" bind:value={$preview_role}
             ><option>Company Admin</option><option>HR / Recruiter</option
             ><option>Candidate</option></select
@@ -324,8 +326,16 @@
                   ></thead
                 ><tbody
                   >{#each ledger.slice(0, 5) as t}<tr
-                      ><td>{t.date}</td><td>{t.type}</td><td>{t.by}</td><td
-                        >{t.amount > 0 ? "+" : ""}{inr(t.amount)}</td
+                      ><td data-label="Date"
+                        ><div class="table_cell_value">{t.date}</div></td
+                      ><td data-label="Activity"
+                        ><div class="table_cell_value">{t.type}</div></td
+                      ><td data-label="By"
+                        ><div class="table_cell_value">{t.by}</div></td
+                      ><td data-label="Amount"
+                        ><div class="table_cell_value">
+                          {t.amount > 0 ? "+" : ""}{inr(t.amount)}
+                        </div></td
                       ></tr
                     >{/each}</tbody
                 >
@@ -379,47 +389,62 @@
                   ></thead
                 ><tbody
                   >{#each filtered_members as member}<tr
-                      ><td
-                        ><div class="person_line">
-                          <span class="person_initials"
-                            >{initials(member.name)}</span
-                          >
-                          <div>
-                            <strong>{member.name}</strong><small
-                              >{member.title}</small
-                            ><small>{member.email}</small>
+                      ><td data-label="Person / role"
+                        ><div class="table_cell_value">
+                          <div class="person_line">
+                            <span class="person_initials"
+                              >{initials(member.name)}</span
+                            >
+                            <div>
+                              <strong>{member.name}</strong><small
+                                >{member.title}</small
+                              ><small>{member.email}</small>
+                            </div>
                           </div>
                         </div></td
                       ><td
-                        >{member_tab === "Pending"
-                          ? member.since
-                          : member.role}</td
-                      ><td
-                        >{inr(member.limit)}<small
-                          >{inr(member.spent)} spent · {member.cap_type}</small
-                        ></td
-                      ><td>{inr(Math.max(0, member.limit - member.spent))}</td
-                      ><td
-                        >{#if member_tab === "Pending"}<button
-                            class="text_action"
-                            on:click={() => claim(member, "Current")}
-                            >Approve</button
-                          ><button
-                            class="text_action"
-                            on:click={() => claim(member, "Rejected")}
-                            >Reject</button
-                          >{:else if member_tab === "Current"}<button
-                            class="text_action"
-                            on:click={() => review_member(member)}
-                            >Edit role / limit</button
-                          ><button
-                            class="text_action"
-                            on:click={() => {
-                              offboard_member = member;
-                              action_error = "";
-                            }}>Mark as past</button
-                          >{:else}<span class="work_note">No active access</span
-                          >{/if}</td
+                        data-label={member_tab === "Pending"
+                          ? "Claimed start"
+                          : "Access"}
+                        ><div class="table_cell_value">
+                          {member_tab === "Pending"
+                            ? member.since
+                            : member.role}
+                        </div></td
+                      ><td data-label="Limit / spent"
+                        ><div class="table_cell_value">
+                          {inr(member.limit)}<small
+                            >{inr(member.spent)} spent · {member.cap_type}</small
+                          >
+                        </div></td
+                      ><td data-label="Available"
+                        ><div class="table_cell_value">
+                          {inr(Math.max(0, member.limit - member.spent))}
+                        </div></td
+                      ><td data-label="Actions"
+                        ><div class="table_cell_value">
+                          {#if member_tab === "Pending"}<button
+                              class="text_action"
+                              on:click={() => claim(member, "Current")}
+                              >Approve</button
+                            ><button
+                              class="text_action"
+                              on:click={() => claim(member, "Rejected")}
+                              >Reject</button
+                            >{:else if member_tab === "Current"}<button
+                              class="text_action"
+                              on:click={() => review_member(member)}
+                              >Edit role / limit</button
+                            ><button
+                              class="text_action"
+                              on:click={() => {
+                                offboard_member = member;
+                                action_error = "";
+                              }}>Mark as past</button
+                            >{:else}<span class="work_note"
+                              >No active access</span
+                            >{/if}
+                        </div></td
                       ></tr
                     >{/each}</tbody
                 >
@@ -480,10 +505,18 @@
                   ></thead
                 ><tbody
                   >{#each ledger as t}<tr
-                      ><td>{t.date}<small>{t.reference}</small></td><td
-                        >{t.type}</td
-                      ><td>{t.by}</td><td
-                        >{t.amount > 0 ? "+" : ""}{inr(t.amount)}</td
+                      ><td data-label="Date / reference"
+                        ><div class="table_cell_value">
+                          {t.date}<small>{t.reference}</small>
+                        </div></td
+                      ><td data-label="Activity"
+                        ><div class="table_cell_value">{t.type}</div></td
+                      ><td data-label="Performed by"
+                        ><div class="table_cell_value">{t.by}</div></td
+                      ><td data-label="Amount (INR)"
+                        ><div class="table_cell_value">
+                          {t.amount > 0 ? "+" : ""}{inr(t.amount)}
+                        </div></td
                       ></tr
                     >{/each}</tbody
                 >

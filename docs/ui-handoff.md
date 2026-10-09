@@ -56,3 +56,13 @@ The portal uses plain JavaScript in `.js` files and Svelte `<script>` blocks, wi
 - The installed SvelteKit/Svelte 4 combination emits build warnings for Svelte 5 exports. Build succeeds; dependency alignment should be handled with the existing IAM app's regression checks before deployment.
 
 For a production bundle preview, run `npm run build`, then `npm run preview`. The repository is configured for Vercel and the team review site is https://iam-frontend-pearl-five.vercel.app/. See the current audit for verification limits on this pass.
+
+
+## Mobile polish — 9 October 2026
+
+- Reviewed 28 new page/tab views: company overview, jobs, culture, products, team, directory, create/edit, dashboard, employees, analytics, workforce, wallet; recruiter overview, manage jobs, posting, applicants and job preview; apply, share, saved jobs, applications; about, FAQ, contact, terms, privacy and portal admin.
+- Fixed badge gaps, section heading alignment, form spacing, file inputs, action sizes, footer spacing and the company mascot. Employee, applicant, job, wallet and admin tables use labelled cards below 850px while retaining table semantics.
+- Selected company, recruiter and admin navigation items stay visible in horizontal menus. Contact and application feedback receives focus and scrolls into view below the sticky header.
+- Inspected full-page screenshots at 390px, checked all 28 views for document overflow at 320px, and visually checked representative layouts at 320, 430, 768 and 1280px. Reviewed employee invitation/role dialogs, pending/empty states, wallet review, applicant dossier, admin tabs/edit dialog and contact confirmation. Application success focus was confirmed in the accessibility tree; the browser connection timed out during the final screenshot.
+- `check:portal`: 0 errors / 0 warnings. Production build and Vercel adapter pass with existing dependency export warnings. All 21 portal tests and 9 auth tests pass.
+- These are responsive browser checks, not physical iPhone/Safari verification. Sample data and backend integration boundaries still apply.

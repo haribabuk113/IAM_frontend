@@ -264,13 +264,14 @@
   font-style: normal;
   font-size: 36px;
 }
-.workspace_preview {
+.portal .workspace_preview {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   color: #69748c;
   font-size: 11px;
   margin: 0 0 20px;
+  line-height: 1.7;
 }
 .workspace_preview > span {
   width: 6px;
@@ -278,6 +279,7 @@
   background: #3155ef;
   border-radius: 100%;
   flex-shrink: 0;
+  margin-top: 6px;
 }
 .workspace_grid {
   display: grid;
@@ -319,14 +321,33 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .panel_heading h2 {
   margin: 0;
+  flex: 1 1 180px;
 }
 .panel_heading a {
   font-size: 12px;
   color: #3155ef;
   font-weight: 600;
+}
+.panel_heading > :not(h2) {
+  flex-shrink: 0;
+}
+.preview_role_field {
+  font-size: 12px;
+  color: #636e88;
+  white-space: nowrap;
+}
+.workspace_panel > p + :is(.button, .workspace_hint, .field_label),
+.workspace_form > p + :is(.button, .field_label),
+.workspace_panel > .workspace_hint + :is(.button, .field_label),
+.workspace_panel > .step_choices + .workspace_hint {
+  margin-top: 20px;
+}
+.workspace_panel > .workspace_hint + .workspace_hint {
+  margin-top: 12px;
 }
 .workspace_actions {
   display: flex;
@@ -451,6 +472,9 @@
   color: #3155ef;
   padding: 5px 9px;
   border-radius: 99px;
+  max-width: 100%;
+  line-height: 1.5;
+  text-align: left;
 }
 .workspace_badge.green {
   background: #edf5df;
@@ -503,6 +527,7 @@
   overflow: auto;
 }
 .workspace_table {
+  min-width: 680px;
   border-collapse: collapse;
   width: 100%;
   text-align: left;
@@ -554,6 +579,10 @@
   align-items: center;
   gap: 12px;
 }
+.person_line > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .person_initials {
   display: flex;
   align-items: center;
@@ -566,6 +595,24 @@
   border-radius: 50%;
   font-size: 12px;
   font-weight: 600;
+}
+.workspace_form .location_picker {
+  margin-bottom: 22px;
+}
+.job_preview_description + h3 {
+  margin-top: 24px;
+}
+.workspace > .work_note + .workspace_tiles {
+  margin-top: 16px;
+}
+.workspace_panel.directory_card > h3 {
+  margin-bottom: 0;
+}
+.workspace_table td[data-label="Actions"] .table_cell_value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 .workspace_form .field_label {
   margin-bottom: 18px;
@@ -596,7 +643,7 @@
   resize: vertical;
   min-height: 110px;
 }
-.workspace_form .form_caption {
+.portal .workspace_form .form_caption {
   font-size: 12px;
   color: #636e88;
   margin: 0 0 24px;
@@ -679,6 +726,7 @@
   transform: rotate(20deg);
 }
 .company_cover .career_companion {
+  width: 175px !important;
   position: absolute;
   right: 30px;
   bottom: 0;
@@ -702,6 +750,15 @@
 .company_identity_panel p {
   margin: 0 0 10px;
   color: #636e88;
+}
+.company_meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.company_identity_panel .workspace_actions {
+  margin-top: 0;
 }
 .company_identity_panel .person_line > div {
   min-width: 0;
@@ -823,6 +880,12 @@
 .org_branches p {
   font-size: 12px;
 }
+.portal .org_branches p + p {
+  margin-top: 16px;
+}
+.org_root .workspace_badge {
+  margin-top: 12px;
+}
 .editorial_split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -851,6 +914,17 @@
   line-height: 1.9;
   color: #636e88;
 }
+.editorial_statement .eyebrow_label {
+  color: #e5ebff;
+  display: block;
+  margin-bottom: 14px;
+}
+.portal .editorial_copy p {
+  margin-top: 16px;
+}
+.editorial_copy .button {
+  margin-top: 24px;
+}
 .faq_item {
   border-bottom: 1px solid #dce2ef;
   padding: 22px 0;
@@ -864,6 +938,9 @@
   max-width: 760px;
   line-height: 1.8;
 }
+.portal .faq_item p {
+  margin-top: 14px;
+}
 .reading_layout {
   display: grid;
   grid-template-columns: 200px minmax(0, 760px);
@@ -875,6 +952,7 @@
 }
 .reading_layout article h2 {
   font-size: 24px;
+  margin-bottom: 12px;
 }
 .reading_layout article p {
   color: #636e88;
@@ -925,6 +1003,12 @@
 .review_success h2 {
   font-size: 30px;
 }
+.review_success > * + * {
+  margin-top: 20px;
+}
+.portal .review_success p {
+  margin-top: 16px;
+}
 .workspace .button {
   white-space: normal;
 }
@@ -939,7 +1023,10 @@
 .compact_footer_links a {
   font-size: 12px;
 }
-.work_note {
+.portal .portal_footer.compact {
+  padding-top: 24px;
+}
+.portal .work_note {
   font-size: 11px;
   color: #636e88;
   margin-top: 16px;
@@ -1097,22 +1184,114 @@
     font-size: 32px;
   }
 }
+@media (max-width: 850px) {
+  .workspace_table {
+    display: block;
+    min-width: 0;
+    font-size: 13px;
+  }
+  .workspace_table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .workspace_table tbody {
+    display: grid;
+    gap: 16px;
+  }
+  .workspace_table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid #dce2ef;
+    border-radius: 12px;
+  }
+  .workspace_table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .workspace_table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: #636e88;
+    margin-bottom: 6px;
+  }
+  .workspace_table td:first-child,
+  .workspace_table td[data-label="Actions"],
+  .workspace_table td[data-label="Stage"],
+  .workspace_table td[data-label="Term"] {
+    grid-column: 1 / -1;
+  }
+  .workspace_table td strong {
+    font-size: 14px;
+  }
+  .workspace_table td small {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .workspace_table td[data-label="Actions"] .table_cell_value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .workspace_table td[data-label="Actions"] :is(a, button) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+    min-height: 44px;
+    border: 1px solid #dce2ef;
+    border-radius: 8px;
+    color: #2445c8;
+    font-size: 12px;
+    background: #f5f7ff;
+  }
+  .workspace_table td select {
+    width: 100%;
+    max-width: 100%;
+  }
+}
 @media (max-width: 600px) {
   .workspace {
     padding-top: 20px;
+    padding-bottom: 48px;
   }
   .workspace_heading {
-    min-height: 190px;
-    padding-bottom: 25px;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 80px;
+    min-height: 0;
+    padding-bottom: 28px;
+    gap: 14px 16px;
+  }
+  .workspace_heading > div:first-child {
+    display: contents;
+  }
+  .workspace_heading .eyebrow_label,
+  .workspace_heading p {
+    grid-column: 1 / -1;
   }
   .workspace_heading h1 {
-    font-size: 33px;
+    grid-column: 1;
+    margin: 0;
+    font-size: clamp(28px, 7.6vw, 33px);
+    line-height: 1.15;
   }
   .workspace_heading p {
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.7;
   }
   .workspace_companion {
+    grid-column: 2;
+    grid-row: 2;
     min-width: 80px;
     width: 80px;
     height: 100px;
@@ -1137,7 +1316,134 @@
     padding: 26px;
   }
   .workspace_panel {
-    padding: 21px;
+    padding: 20px;
+  }
+  .panel_heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .panel_heading h2 {
+    flex-basis: auto;
+  }
+  .panel_heading > .workspace_badge {
+    white-space: normal;
+  }
+  .panel_heading > :is(.button, a) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .workspace_role_switch {
+    padding: 16px;
+    border: 1px solid #dce2ef;
+    border-radius: 12px;
+    background: #fff;
+    gap: 12px;
+  }
+  .preview_role_field {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .preview_role_field select {
+    min-width: 0;
+    width: auto;
+    flex: 1;
+  }
+  .workspace
+    :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not(
+      [type="range"]
+    ),
+  .portal_modal .workspace_form .field_input {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .workspace .field_label,
+  .portal_modal .workspace_form .field_label {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .workspace .field_label small,
+  .workspace .form_helper {
+    display: block;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+  .workspace input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    font-size: 12px !important;
+  }
+  .workspace input[type="file"]::file-selector-button {
+    border: 0;
+    border-radius: 6px;
+    padding: 10px;
+    margin-right: 8px;
+    background: #eef2ff;
+    color: #2445c8;
+    font: inherit;
+    font-weight: 600;
+  }
+  .workspace .button,
+  .portal_modal .form_actions .button {
+    min-height: 44px;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+    padding: 12px 16px;
+  }
+  .workspace .filter_chips label {
+    min-height: 44px;
+    padding: 10px;
+    font-size: 12px;
+    gap: 8px;
+  }
+  .workspace .filter_chips input {
+    width: 16px;
+    height: 16px;
+  }
+  .workspace .form_actions,
+  .portal_modal .form_actions,
+  .workspace_actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+  .workspace_actions.reorder_actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reorder_actions > :last-child {
+    grid-column: 1 / -1;
+  }
+  .workspace_actions .button {
+    width: 100%;
+  }
+  .company_benefits > div {
+    flex-wrap: nowrap !important;
+    align-items: flex-start;
+  }
+  .company_benefits > div > div {
+    min-width: 0;
+    flex: 1;
+  }
+  .candidate_summary_list > div {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px 12px;
+  }
+  .candidate_summary_list .workspace_badge,
+  .candidate_summary_list .button {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .workspace_list .person_initials + .list_body + .button {
+    margin-left: 50px;
+  }
+  .workspace_panel > .workspace_list > div > .list_body {
+    flex-basis: calc(100% - 55px);
   }
   .stat_card {
     padding: 17px;
@@ -1152,7 +1458,14 @@
     grid-template-columns: 1fr;
   }
   .workspace_toolbar > * {
-    flex: 1;
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .workspace_toolbar > .company_job_options {
+    flex-basis: 100%;
+  }
+  .workspace_toolbar > .button {
+    align-self: stretch;
   }
   .workspace_tabs {
     gap: 22px;
@@ -1180,7 +1493,81 @@
     bottom: 8px;
   }
   .company_identity_panel {
-    padding: 21px;
+    padding: 20px;
+    gap: 24px;
+  }
+  .company_identity_panel .person_line {
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .company_identity_panel .workspace_actions {
+    width: 100%;
+  }
+  .company_identity_panel .company_logo {
+    width: 52px !important;
+    height: 52px !important;
+    font-size: 28px !important;
+  }
+  .company_meta {
+    gap: 8px;
+  }
+  .workspace_badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  .company_page_tabs {
+    margin: 16px 0 24px;
+  }
+  .workspace_tabs {
+    scroll-padding-inline: 4px;
+    padding-inline: 4px;
+    font-size: 13px;
+  }
+  .workspace_tabs > * {
+    flex-shrink: 0;
+  }
+  .org_tree {
+    padding: 20px 0;
+  }
+  .org_root {
+    margin-bottom: 24px;
+  }
+  .review_success {
+    padding: 12px 0;
+  }
+  .reading_layout aside {
+    flex-direction: column;
+    padding: 16px;
+    gap: 0;
+    border: 1px solid #dce2ef;
+    border-radius: 12px;
+    margin-block: 20px;
+    background: white;
+  }
+  .reading_layout aside a {
+    white-space: normal;
+    min-height: 44px;
+  }
+  .portal .portal_footer.compact .footer_bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-block: 24px;
+  }
+  .portal .portal_footer.compact .footer_bottom > * {
+    width: auto;
+    margin: 0;
+  }
+  .compact_footer_links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
+  .compact_footer_links a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
   }
   .company_identity_panel h1 {
     font-size: 26px;
@@ -1198,9 +1585,6 @@
   .workspace_list .list_actions {
     width: 100%;
     justify-content: flex-end;
-  }
-  .workspace_table {
-    min-width: 560px;
   }
   .workspace_preview {
     align-items: flex-start;
@@ -1284,4 +1668,27 @@
 }
 .job_preview_description h3 {
   margin-top: 22px;
+}
+
+.candidate_dossier > h3 + p {
+  margin-top: 8px;
+}
+.candidate_dossier > p + :is(.filter_chips, .workspace_hint) {
+  margin-top: 16px;
+}
+.candidate_dossier .dossier_about {
+  margin-top: 24px;
+}
+.workspace_panel > .workspace_table_wrap + .workspace_hint {
+  margin-top: 20px;
+}
+
+.workspace_panel > p + .workspace_table_wrap {
+  margin-top: 20px;
+}
+.feedback_panel {
+  scroll-margin-top: 110px;
+}
+.feedback_panel:focus {
+  outline: none;
 }

@@ -273,7 +273,7 @@
                 bind:value={product.url}
               /></label
             >
-            <div class="workspace_actions">
+            <div class="workspace_actions reorder_actions">
               <button
                 type="button"
                 class="button button_outline button_small"
@@ -336,7 +336,7 @@
                 ></textarea></label
               >
             </div>
-            <div class="workspace_actions">
+            <div class="workspace_actions reorder_actions">
               <button
                 type="button"
                 class="button button_outline button_small"
