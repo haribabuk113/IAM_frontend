@@ -1,4 +1,5 @@
 <script>
+  import { closed_job_ids } from "$lib/portal/workspace_state.js";
   import { page } from "$app/stores";
   import { goto, afterNavigate as after_navigate } from "$app/navigation";
   import Icon from "$lib/portal/icon.svelte";
@@ -43,7 +44,12 @@
     previous_search = $page.url.search;
     current_page = 1;
   }
-  $: results = filter_jobs(jobs, applied_filters, $saved_jobs, $applications);
+  $: results = filter_jobs(
+    jobs.filter((j) => !$closed_job_ids.includes(j.id)),
+    applied_filters,
+    $saved_jobs,
+    $applications,
+  );
   $: pending =
     filters_to_params(filters).toString() !==
     filters_to_params(applied_filters).toString();
@@ -255,10 +261,8 @@
             ><span>Sort by</span><select
               aria-label="Sort opportunities"
               bind:value={filters.sort}
-              ><option value="recommended">Most relevant</option><option
-                value="salary">Highest salary</option
-              ><option value="newest">Newest first</option><option value="title"
-                >Job title A–Z</option
+              ><option value="salary">Highest salary</option><option
+                value="newest">Newest first</option
               ></select
             ></label
           >

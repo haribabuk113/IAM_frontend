@@ -18,6 +18,7 @@
     "src/lib/portal/**/*.js",
     "src/lib/portal/**/*.svelte",
     "src/routes/(portal)/**/*.js",
-    "src/routes/(portal)/**/*.svelte"
+    "src/routes/(portal)/**/*.svelte",
+    "src/routes/admin/+page.svelte"
   ]
 }

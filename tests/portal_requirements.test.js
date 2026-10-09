@@ -100,7 +100,7 @@ test("city trees flatten to leaves and radius requires a single city", () => {
   assert.equal(
     search({ locations: ["in-blr", "in-bom"] }).length,
     jobs.filter((job) =>
-      ["Bengaluru, India", "Mumbai, India"].includes(job.location),
+      !job.unlisted && ["Bengaluru, India", "Mumbai, India"].includes(job.location),
     ).length,
   );
   assert.ok(filter_error({ ...default_filters(), radius: 25 }));
@@ -193,11 +193,11 @@ test("public search excludes expired, unlisted and previously applied jobs", () 
     jobs[0],
     { ...jobs[1], posted: 31 },
     { ...jobs[2], unlisted: true },
-    jobs[3],
+    { ...jobs[0], id: "another-public-job" },
   ];
   assert.deepEqual(
     search({}, data, [jobs[0].id]).map((job) => job.id),
-    [jobs[3].id],
+    ["another-public-job"],
   );
   assert.ok(search({ posted_within: 1 }).every((job) => job.posted <= 1));
 });
@@ -270,4 +270,9 @@ test("profile validation catches reserved handles, date inversions and missing a
   draft.experiences[0].current = false;
   draft.experiences[0].end = "2020-01";
   assert.match(profile_error(draft), /before/);
+});
+
+test("free fixture jobs are accessible by direct link but excluded from public discovery", () => {
+  assert.ok(jobs.some(job => job.tier === "Free"));
+  assert.ok(search({}).every(job => job.tier !== "Free"));
 });

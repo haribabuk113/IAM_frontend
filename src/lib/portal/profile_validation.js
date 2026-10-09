@@ -2,6 +2,11 @@ const text = (value) => typeof value === "string";
 const shape = (item, fields) =>
   item && fields.every(([key, type]) => typeof item[key] === type);
 const arrays = {
+  skill_groups: (item) =>
+    item &&
+    typeof item.name === "string" &&
+    Array.isArray(item.skills) &&
+    item.skills.every(text),
   skills: text,
   work_types: text,
   preferred_locations: text,

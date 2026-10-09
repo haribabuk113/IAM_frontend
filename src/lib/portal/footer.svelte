@@ -19,13 +19,13 @@
         <div class="footer_links">
           <span>YOUR NEXT CHAPTER</span><a href="/jobs">Find a job</a><a
             href="/jobs?mode=Remote">Work from anywhere</a
-          ><a href="/jobs?saved=1">Saved opportunities</a>
+          ><a href="/saved-jobs">Saved opportunities</a>
         </div>
         <div class="footer_links">
           <span>MAKE YOURSELF KNOWN</span><a href="/signup">Create an account</a
           ><a href="/login">Sign in</a><a href="/profile">Your profile</a><a
-            href="/#companies">Explore companies</a
-          ><a href="/#our-approach">The Referise approach</a>
+            href="/companies">Explore companies</a
+          ><a href="/about">The Referise approach</a>
         </div>
         <div class="footer_note">
           <span class="eyebrow_label">BUILT AROUND PEOPLE</span>
@@ -33,6 +33,11 @@
           <Icon name="arrow-up-right" size={28} />
         </div>
       </div>{/if}
+    <nav class="compact_footer_links" aria-label="Footer">
+      <a href="/about">About us</a><a href="/faq">FAQ</a><a href="/contact"
+        >Contact us</a
+      ><a href="/terms">Terms & conditions</a><a href="/privacy">Privacy</a>
+    </nav>
     <div class="footer_bottom">
       <span>© {new Date().getFullYear()} Referise. A world of possibility.</span
       ><span class="preview_label"

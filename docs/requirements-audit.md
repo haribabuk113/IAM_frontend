@@ -1,3 +1,63 @@
+# Full UI review — 9 October 2026
+
+The cobalt, navy and lime design and existing companion artwork are retained. This is a UI preview: local edits are not live company, candidate or hiring records.
+
+## Changes in this pass
+
+- One shared navigation on landing, profile and workspace pages: Home, Career, Jobs, Companies and About. Mobile groups collapse instead of showing one long list.
+- Homepage sample-job grid replaced with profile, company discovery and career-preference cards.
+- Search shows workplace, job type, experience and posted date first. Documented secondary options sit under More filters. Removed the exposed radius, maximum-experience, industry, company-size, benefits and match-score controls. Newest and highest salary are the available sorts. Old URL parsing remains compatible.
+- Free listings follow the manual's unlisted/direct-link rule. They are not offered as a public-search filter. The manual also lists Free as a search category; that conflict needs a product decision.
+- Added the company, recruiter, application, saved/share, information and site-admin screens below.
+- Profile now includes grouped/reorderable skills, photo cropping, a Jobs posted by me link and local company verification requests. Editing a linked experience requests a fresh review.
+- Company forms include locations, products, benefits, social links and cropped logo/cover/product images. Company administration includes claims, roles, spending caps, wallet history and the sole-admin guard.
+- Job posting separates free/premium rules, validates required fields, permits incomplete drafts and shows a confirmation before saving a posting preview.
+
+## Pages to review
+
+Use these paths on the local preview. They will appear on Vercel only after deployment.
+
+| Area | Routes |
+| --- | --- |
+| Landing and profile | `/`, `/profile`, `/profile?tab=activity`, `/profile?tab=preferences` |
+| Jobs | `/jobs`, `/jobs/senior-product-designer` |
+| Apply, save, share | `/jobs/senior-product-designer/apply`, `/saved-jobs`, `/jobs/senior-product-designer/share`, `/applications` |
+| Company directory and form | `/companies`, `/company/create`, `/company/forma/edit` |
+| Public company | `/company/forma`, plus `?tab=jobs`, `?tab=culture`, `?tab=products`, `?tab=team` |
+| Company administration | `/company/forma/dashboard`, plus `/employees`, `/analytics`, `/hierarchy`, `/wallet` |
+| Recruiter | `/recruiter`, `/recruiter/post-job`, `/recruiter/jobs`, `/recruiter/applicants` |
+| Saved posting previews | `/recruiter/jobs/[id]` (open a saved draft from Manage jobs) |
+| Information | `/about`, `/terms`, `/privacy`, `/faq`, `/contact` |
+| Site administration | `/admin`; existing IAM `/admin/users` and `/admin/providers` remain separate |
+| Existing authentication | `/login`, `/signup`, `/auth/check-email`, `/auth/help` |
+
+## Source status and decisions
+
+- Reviewed the 29-page local Manual document Job portal PDF and the supplied screenshots.
+- Opened the new Drive folder and read `candidate_profile/code.html`, `Company_profile/code.html`, `Company_Profile_ jobs_tab_card/code.html` and `Company_Profile_admin_wallet/code.html`. The folder is populated; Drive's individual search, post-job and profile-analytics previews returned an offline error. Remaining reference screens still need a final cross-check from a local download.
+- Retained privacy controls instead of exposing current salary/contact data simply because a reference displays them.
+- Used the manual's flat company-admin model. Workforce hierarchy currently groups people by department; reporting-manager rules are not specified.
+- Reference certification badges, cryptographic hashes, live guarantees and tax invoices are not represented as real services or certifications.
+
+## Review boundaries
+
+Payments, invitations, contact messages, application submission, secure file storage, live analytics and permission enforcement need their backend services. Company-role selectors demonstrate UI states only. Resume files last for the current session; browser-saved drafts and images do not sync to other devices. Job descriptions include a Markdown toolbar and safe formatted preview. Terms/privacy pages are content-review layouts, not finalized policies. Posting prices and detailed reporting lines require product decisions.
+
+## Verification
+
+- `npm run check:portal`: no errors or warnings, including the new admin entry.
+- Portal/job-post tests: 21 passed. Authentication tests: 9 passed.
+- Production build: succeeds with the Vercel adapter.
+- HTTP checks: 28 portal routes returned 200.
+- Browser checks: shared mobile menu; mobile posting/dashboard layouts; skill ordering; profile-to-company verification; incomplete draft saving and reload/editing, company edits, application history and sole-admin protection.
+- `npm run check` still fails under the repository-wide strict JavaScript type-check configuration. The scoped Svelte check and production build are the passing checks; do not report the broad check as passing.
+
+---
+
+## Historical audit — 1 October 2026
+
+The earlier filter inventory below is superseded by the simplified controls described above.
+
 # Portal fields and filters audit
 
 Reviewed 1 October 2026. Scope: the four approved portal pages, keeping the cobalt design. These remain a frontend preview with fictional data.

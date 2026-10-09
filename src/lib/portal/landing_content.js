@@ -66,7 +66,7 @@ export const landing_faqs = [
   {
     question: "Can I view salaries in my own currency?",
     answer:
-      "The planned platform stores salaries against an INR baseline and uses daily exchange rates to display your preferred currency. The current sample jobs show their original currencies; live conversion is not connected yet.",
+      "The planned platform stores salaries against an INR baseline and uses daily exchange rates to display your preferred currency. The preview converts sample salaries using illustrative rates. Live daily rates are not connected yet.",
   },
   {
     question: "Are the jobs and platform numbers live?",

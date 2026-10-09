@@ -5,13 +5,16 @@
   import "$lib/portal/portal_pages.css";
   import "$lib/portal/cobalt_pages.css";
   import "$lib/portal/requirement_fields.css";
+  import "$lib/portal/workspace.css";
   import Header from "$lib/portal/header.svelte";
   import Footer from "$lib/portal/footer.svelte";
   import Icon from "$lib/portal/icon.svelte";
   import { hydrate_preview, notification } from "$lib/portal/state";
+  import { hydrate_workspace } from "$lib/portal/workspace_state.js";
   let offline = false;
+  hydrate_preview();
+  hydrate_workspace();
   on_mount(() => {
-    hydrate_preview();
     const update = () => (offline = !navigator.onLine);
     update();
     window.addEventListener("online", update);
@@ -31,7 +34,7 @@
   /></svelte:head
 >
 <div class="portal" class:cobalt_pages={$page.url.pathname !== "/"}>
-  {#if $page.url.pathname !== "/"}<Header />{/if}
+  <Header />
   {#if offline}<div class="offline_notice" role="status">
       <Icon name="wifi" size={16} />You’re offline. Your saved preview is still
       here.

@@ -1,4 +1,6 @@
 <script>
+  import { closed_job_ids } from "$lib/portal/workspace_state.js";
+  import { goto } from "$app/navigation";
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
   import Company_logo from "$lib/portal/company_logo.svelte";
@@ -8,11 +10,9 @@
   import {
     saved_jobs,
     toggle_saved,
-    profile,
     applications,
     toast,
     viewing_currency,
-    resume_file,
   } from "$lib/portal/state";
   import { converted_salary } from "$lib/portal/currency.js";
   export let data;
@@ -22,6 +22,7 @@
     ...jobs.filter(
       (item) =>
         item.id !== job.id &&
+        !$closed_job_ids.includes(item.id) &&
         item.category === job.category &&
         !$applications.includes(item.id) &&
         item.posted <= 30 &&
@@ -30,57 +31,22 @@
     ...jobs.filter(
       (item) =>
         item.id !== job.id &&
+        !$closed_job_ids.includes(item.id) &&
         item.category !== job.category &&
         !$applications.includes(item.id) &&
         item.posted <= 30 &&
         !item.unlisted,
     ),
   ].slice(0, 2);
-  let apply_dialog = false;
-  let application_complete = false;
-  let application_name = "";
-  let application_email = "";
-  let application_note = "";
-  let application_location = "";
-  let application_notice = "";
-  let application_salary = "";
-  let application_experience = "";
-  let consent = false;
-  let share_dialog = false;
-  let share_url = "";
   let report_dialog = false;
   let report_reason = "Information is inaccurate";
   let report_note = "";
   let active_section = "overview";
   function start_apply() {
-    application_name = $profile.name;
-    application_email = $profile.email;
-    application_note = "";
-    application_location = $profile.location;
-    application_notice = $profile.is_serving_notice
-      ? `Last working day: ${$profile.last_working_date}`
-      : $profile.notice;
-    application_salary = $profile.expected;
-    application_experience = $profile.experience;
-    consent = false;
-    application_complete = false;
-    apply_dialog = true;
-  }
-  function apply() {
-    if (!consent) return;
-    applications.update((value) =>
-      value.includes(job.id) ? value : [...value, job.id],
-    );
-    application_complete = true;
+    goto(`/jobs/${job.id}/apply`);
   }
   async function share() {
-    share_url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(share_url);
-      toast("Link copied. Good opportunities are worth sharing.");
-    } catch {
-      share_dialog = true;
-    }
+    goto(`/jobs/${job.id}/share`);
   }
   function submit_report() {
     report_dialog = false;
@@ -145,7 +111,7 @@
       </div>
       <div class="detail_location">
         <span><Icon name="location" size={15} />{job.location}</span><span
-          class="green_dot_label"><span></span>Actively hiring</span
+          class="green_dot_label"><span></span>{$closed_job_ids.includes(job.id) ? "Applications closed" : "Actively hiring"}</span
         ><span
           >Posted {job.posted === 0
             ? "today"
@@ -310,13 +276,16 @@
         <button
           class="button button_terracotta"
           on:click={start_apply}
-          disabled={$applications.includes(job.id)}
+          disabled={$closed_job_ids.includes(job.id) ||
+            $applications.includes(job.id)}
           ><Icon
             name={$applications.includes(job.id) ? "check" : "arrow-up-right"}
             size={17}
-          />{$applications.includes(job.id)
-            ? "Applied in preview"
-            : "Apply for this role"}</button
+          />{$closed_job_ids.includes(job.id)
+            ? "Applications closed"
+            : $applications.includes(job.id)
+              ? "Applied in preview"
+              : "Apply for this role"}</button
         ><span class="apply_footnote"
           ><Icon name="lock" size={12} />This is a preview. No application is
           sent to an employer.</span
@@ -350,7 +319,7 @@
           </div>
         </dl>
         <a
-          href={`/jobs?q=${encodeURIComponent(company.name)}`}
+          href={`/company/${company.id}`}
           class="button button_outline button_full"
           >More roles at {company.name}<Icon
             name="arrow-up-right"
@@ -431,147 +400,6 @@
     </div>
   </section>
 </main>
-{#if apply_dialog}<Modal
-    title={application_complete
-      ? "Your next chapter is taking shape."
-      : "Make your introduction."}
-    on:close={() => (apply_dialog = false)}
-  >
-    {#if job.application !== "Easy apply"}<p class="modal_description">
-        This role uses {job.application === "Email"
-          ? "email applications"
-          : "an external application site"}. The employer’s destination is not
-        connected in this preview. No application will be recorded.
-      </p>
-      <button
-        class="button button_outline"
-        on:click={() => (apply_dialog = false)}>Back to the role</button
-      >{:else if application_complete}<div class="application_success">
-        <span><Icon name="check" size={32} /></span>
-        <h3>Application saved in this preview.</h3>
-        <p>
-          You’ve tried applying for <strong>{job.title}</strong> at
-          <strong>{company.name}</strong>. This is saved in your browser only;
-          nothing has been sent to an employer.
-        </p>
-        <div class="form_actions">
-          <a class="button button_outline" href="/profile?tab=activity"
-            >View your activity</a
-          ><button
-            class="button button_dark"
-            on:click={() => (apply_dialog = false)}>Back to the role</button
-          >
-        </div>
-      </div>
-    {:else}<div class="apply_modal_role">
-        <Company_logo id={company.id} size={38} />
-        <div>
-          <strong>{job.title}</strong><span
-            >{company.name} · {job.location}</span
-          >
-        </div>
-      </div>
-      <form on:submit|preventDefault={apply}>
-        <div class="form_grid">
-          <label class="field_label"
-            >Full name<input
-              class="field_input"
-              required
-              maxlength="80"
-              bind:value={application_name}
-              autocomplete="name"
-            /></label
-          ><label class="field_label"
-            >Email address<input
-              class="field_input"
-              type="email"
-              required
-              bind:value={application_email}
-              autocomplete="email"
-            /></label
-          ><label class="field_label"
-            >Current location<input
-              class="field_input"
-              required
-              bind:value={application_location}
-            /></label
-          >
-          <label class="field_label"
-            >Notice / availability<input
-              class="field_input"
-              required
-              bind:value={application_notice}
-            /></label
-          >
-          <label class="field_label"
-            >Expected compensation<input
-              class="field_input"
-              required
-              bind:value={application_salary}
-            /></label
-          >
-          <label class="field_label"
-            >Experience<input
-              class="field_input"
-              required
-              bind:value={application_experience}
-            /></label
-          >
-          <label class="field_label full_width"
-            >Résumé<input
-              class="field_input"
-              readonly
-              value={$resume_file ? $resume_file.name : "Sample profile résumé"}
-            /><small
-              >Review or upload your résumé on your profile. No file is sent in
-              this preview.</small
-            ></label
-          >
-          <label class="field_label full_width"
-            >A short introduction <span class="muted">Optional</span><textarea
-              class="field_input"
-              maxlength="1200"
-              bind:value={application_note}
-              placeholder="What about this opportunity caught your eye?"
-              rows="3"></textarea></label
-          >
-        </div>
-        <div class="application_profile_note">
-          <Icon name="user" size={18} /><span
-            >Your preview profile is ready to share.</span
-          ><a href="/profile">Review <Icon name="arrow-up-right" size={13} /></a
-          >
-        </div>
-        <label class="consent_checkbox"
-          ><input type="checkbox" required bind:checked={consent} /><span
-            >I understand this is a preview application. It will be saved in
-            this browser and won’t be sent to an employer.</span
-          ></label
-        >
-        <div class="form_actions">
-          <button
-            type="button"
-            class="button button_outline"
-            on:click={() => (apply_dialog = false)}>Cancel</button
-          ><button type="submit" class="button button_terracotta"
-            >Try the application <Icon name="arrow-right" size={15} /></button
-          >
-        </div>
-      </form>{/if}
-  </Modal>{/if}
-{#if share_dialog}<Modal
-    title="Good work is worth sharing."
-    on:close={() => (share_dialog = false)}
-    ><p class="modal_description">Copy this link to share the opportunity.</p>
-    <label class="field_label"
-      >Opportunity link<input
-        class="field_input"
-        readonly
-        value={share_url}
-        on:focus={(event) => event.currentTarget.select()}
-      /></label
-    ></Modal
-  >{/if}
 {#if report_dialog}<Modal
     title="Help keep things clear."
     on:close={() => (report_dialog = false)}
@@ -593,7 +421,8 @@
           bind:value={report_note}
           maxlength="1000"
           rows="3"
-          placeholder="Add a little context…"></textarea></label
+          placeholder="Add a little context…"
+        ></textarea></label
       >
       <div class="form_actions">
         <button class="button button_dark" type="submit"

@@ -424,6 +424,7 @@ const city_ids = {
 };
 export const jobs = job_fixtures.map((job, index) => ({
   ...job,
+  unlisted: job.tier === "Free",
   designation_id: job.id,
   location_type: job.location === "Worldwide" ? "world_remote" : "specific",
   location_ids: city_ids[job.location] ? [city_ids[job.location]] : [],
@@ -450,6 +451,8 @@ export const jobs = job_fixtures.map((job, index) => ({
   apply_clicks: 32 + index,
 }));
 export const default_profile = {
+  photo: "",
+  skill_groups: [],
   target_roles: ["senior-product-designer"],
   education: [
     {

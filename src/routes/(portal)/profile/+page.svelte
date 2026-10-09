@@ -3,6 +3,12 @@
   import { goto } from "$app/navigation";
   import { onDestroy as on_destroy } from "svelte";
   import { profile_error } from "$lib/portal/profile_validation.js";
+  import Profile_skills from "$lib/portal/profile_skills.svelte";
+  import Profile_photo from "$lib/portal/profile_photo.svelte";
+  import {
+    team_members,
+    company_records,
+  } from "$lib/portal/workspace_state.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
   import { notice_periods, location_name } from "$lib/portal/filter_options.js";
   import Icon from "$lib/portal/icon.svelte";
@@ -27,7 +33,6 @@
       .join(" ");
   }
   let editing = "";
-  let expanded_skills = false;
   let resume_url = "";
   let draft = {
     ...default_profile,
@@ -129,16 +134,23 @@
           currency: draft.salary_currency,
           maximumFractionDigits: 0,
         }).format(draft.expected_salary) + " / year";
-    if (editing === "background")
-      draft.experiences = draft.experiences.map((entry, index) => ({
-        ...entry,
-        verification:
-          JSON.stringify(entry) !== JSON.stringify($profile.experiences[index])
-            ? entry.verification === "Verified"
-              ? "Pending"
-              : "Unverified"
-            : entry.verification,
-      }));
+    if (editing === "background") {
+      draft.experiences = draft.experiences.map((entry, index) => {
+        if (
+          JSON.stringify(entry) === JSON.stringify($profile.experiences[index])
+        )
+          return entry;
+        const linked = $company_records.find(
+          (c) => c.name.toLowerCase() === entry.company.toLowerCase(),
+        );
+        const updated = {
+          ...entry,
+          verification: linked ? "Pending" : "Unverified",
+        };
+        if (linked) queue_claim(updated, index, linked.id);
+        return updated;
+      });
+    }
     if (editing === "skills")
       draft.skills = [
         ...new Set(
@@ -155,6 +167,36 @@
     });
     editing = "";
     toast("Profile updated. Your next chapter looks good on you.");
+  }
+  function queue_claim(experience, index, company) {
+    const signature = JSON.stringify([
+      experience.company,
+      experience.title,
+      experience.type,
+      experience.start,
+      experience.end,
+      experience.current,
+      experience.description,
+    ]);
+    team_members.update((items) => [
+      ...items.filter((m) => m.id !== `profile-owner-${index}`),
+      {
+        id: `profile-owner-${index}`,
+        profile_entry: index,
+        signature,
+        name: draft.name || $profile.name,
+        email: draft.email || $profile.email,
+        title: experience.title,
+        role: "Employee",
+        status: "Pending",
+        company,
+        department: "Other",
+        limit: 0,
+        spent: 0,
+        cap_type: "Monthly",
+        since: experience.start,
+      },
+    ]);
   }
   function privacy(key) {
     profile.update((value) => ({ ...value, [key]: !value[key] }));
@@ -296,9 +338,7 @@
         ><span class="cover_star">✳</span>
       </div>
       <div class="profile_identity_body">
-        <div class="profile_avatar">
-          {initials}<span><Icon name="check" size={12} /></span>
-        </div>
+        <Profile_photo {initials} readonly={public_preview} />
         <div class="profile_identity_main">
           <div class="profile_name_row">
             <h2>{$profile.name}</h2>
@@ -356,7 +396,7 @@
             class:active={current_tab === "activity"}
             >Activity & insights <span class="tab_dot"></span></a
           >
-          {#if !public_preview}<a
+          {#if !public_preview}<a href="/recruiter/jobs">Jobs posted by me</a><a
               href="/profile?tab=preferences"
               class:active={current_tab === "preferences"}>Preferences</a
             >{/if}
@@ -392,29 +432,8 @@
             </div>
           </section>
           <section class="profile_section">
-            <div class="profile_section_heading">
-              <h2>The craft I bring</h2>
-              {#if !public_preview}<button
-                  class="icon_button"
-                  aria-label="Edit skills"
-                  on:click={() => edit("skills")}
-                  ><Icon name="edit" size={16} /></button
-                >{/if}
-            </div>
-            <div class="skill_chips profile_skills">
-              {#each expanded_skills ? $profile.skills : $profile.skills.slice(0, 8) as skill}<span
-                  >{skill}</span
-                >{/each}
-            </div>
+            <Profile_skills readonly={public_preview} />
           </section>
-          {#if $profile.skills.length > 8}<button
-              class="text_link"
-              aria-expanded={expanded_skills}
-              on:click={() => (expanded_skills = !expanded_skills)}
-              >{expanded_skills
-                ? "Show fewer skills"
-                : `Show all ${$profile.skills.length} skills`}</button
-            >{/if}
           <section class="profile_section">
             <div class="profile_section_heading">
               <h2>My journey so far</h2>
@@ -427,7 +446,8 @@
                 >{/if}
             </div>
             <div class="experience_timeline">
-              {#each $profile.experiences as experience}<article>
+              {#each $profile.experiences as experience, experience_index}<article
+                >
                   <span class="resume_file_icon"
                     ><Icon name="building" size={24} /></span
                   >
@@ -451,6 +471,36 @@
                     <p class="experience_description">
                       {experience.description}
                     </p>
+                    {#if !public_preview && experience.verification !== "Verified" && experience.verification !== "Pending"}<button
+                        class="button button_outline button_small"
+                        on:click={() => {
+                          profile.update((p) => ({
+                            ...p,
+                            experiences: p.experiences.map((item, i) =>
+                              i === experience_index
+                                ? { ...item, verification: "Pending" }
+                                : item,
+                            ),
+                          }));
+                          const linked = $company_records.find(
+                            (c) =>
+                              c.name.toLowerCase() ===
+                              experience.company.toLowerCase(),
+                          );
+                          if (linked)
+                            queue_claim(
+                              experience,
+                              experience_index,
+                              linked.id,
+                            );
+                          toast(
+                            "Verification request added to the local preview. No request sent to a company.",
+                          );
+                        }}
+                        >{experience.verification === "Rejected"
+                          ? "Request approval again"
+                          : "Request verification"}</button
+                      >{/if}
                   </div>
                 </article>{/each}
             </div>
@@ -941,7 +991,8 @@
               rows="9"
               required
               maxlength="2000"
-              bind:value={draft.about}></textarea><span class="muted"
+              bind:value={draft.about}
+            ></textarea><span class="muted"
               >{draft.about.length}/2000 characters</span
             ></label
           >{:else if editing === "skills"}<label class="field_label full_width"
@@ -949,7 +1000,8 @@
               class="field_input"
               rows="5"
               maxlength="500"
-              bind:value={skill_text}></textarea><span class="muted"
+              bind:value={skill_text}
+            ></textarea><span class="muted"
               >Separate each skill with a comma.</span
             ></label
           >{:else}<label class="field_label full_width"
@@ -1011,7 +1063,7 @@
         <h3>About</h3>
         <p>{$profile.about}</p>
         <h3>Experience</h3>
-        {#each $profile.experiences as experience}<strong
+        {#each $profile.experiences as experience, experience_index}<strong
             >{experience.title} · {experience.company}</strong
           >
           <p>

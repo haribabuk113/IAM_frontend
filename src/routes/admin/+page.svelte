@@ -1,8 +1,6 @@
 <script>
-    import { onMount } from 'svelte';
-    import { goto } from '$app/navigation';
-
-    onMount(() => {
-        goto('/admin/users', { replaceState: true });
-    });
+  import Portal_layout from "../(portal)/+layout.svelte";
+  import Admin from "$lib/portal/site_admin.svelte";
 </script>
+
+<Portal_layout><Admin /></Portal_layout>
