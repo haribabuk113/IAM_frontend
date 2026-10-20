@@ -42,3 +42,12 @@ Source: [UI/UX corrections](https://docs.google.com/document/d/164iP92inEs9WmqGU
 - Mobile checks include 390px sign-in, search and profile views; SSO choices fit a normal 844px-high viewport and these pages have no horizontal document overflow.
 
 Production deployment verification is recorded in the delivery message after the push.
+
+
+## Layout follow-up
+
+- Scoped the landing search styles to stop nested controls inheriting input borders, widths and heights. Checked designation suggestions, location selection and company search.
+- Rebuilt the career track with visible milestone names, roles and dates; connectors meet the dot centres. Three milestones fit on small phones, with an independent scroll track for longer histories.
+- Corrected metrics layout, filter spacing, sidebar checkbox wrapping, form row gaps, skill-chip clipping, analytics selector width, membership balances and profile action alignment.
+- Mobile profile navigation now shows all four tabs. Mobile form fields use 16px text to avoid focus zoom on iOS. The preference summary uses the same minimum salary value as the sidebar.
+- Reviewed the changed screens and dialogs visually. Production DOM checks covered 16 routes/views at 320, 390, 768 and 1440px with no document overflow. Portal diagnostics and all 29 portal tests passed; production build succeeded. Existing Svelte 4 / SvelteKit export warnings remain unchanged.

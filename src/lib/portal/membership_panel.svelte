@@ -62,7 +62,8 @@
       {#each [1, 2, 30, 60, 90] as duration}<button
           type="button"
           class:active={days === duration}
-          on:click={() => (days = duration)}>{duration} days</button
+          on:click={() => (days = duration)}
+          >{duration} {duration === 1 ? "day" : "days"}</button
         >{/each}
     </div>
     <label class="field_label"

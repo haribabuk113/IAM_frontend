@@ -64,7 +64,7 @@
 </script>
 
 <section class="profile_section">
-  <div class="profile_section_heading">
+  <div class="profile_section_heading posting_analytics_heading">
     <h2>Open doors. New connections.</h2>
     <label class="field_label"
       ><span class="sr_only">Job analytics period</span><select

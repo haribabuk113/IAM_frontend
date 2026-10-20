@@ -62,8 +62,9 @@
     >
     <div class="salary_filter_row">
       <label class="field_label"
-        ><span class="sr_only">Preferred currency</span><select
+        ><span>Currency</span><select
           class="field_input"
+          aria-label="Preferred currency"
           bind:value={filters.currency}
           on:change={() => (filters.min_salary = 0)}
           ><option>INR</option><option>USD</option><option>EUR</option><option
@@ -71,11 +72,12 @@
           ></select
         ></label
       ><label class="field_label"
-        ><span class="sr_only">Minimum annual salary</span><input
+        ><span>Minimum / year</span><input
           class="field_input"
           type="number"
           min="0"
           placeholder="Minimum"
+          aria-label="Minimum annual salary"
           bind:value={filters.min_salary}
         /></label
       >

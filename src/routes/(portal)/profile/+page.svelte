@@ -795,8 +795,8 @@
                 <dd>{$profile.work_mode}</dd>
               </div>
               <div>
-                <dt>Expected compensation</dt>
-                <dd>{$profile.expected}</dd>
+                <dt>Minimum expected annual salary</dt>
+                <dd>{format_preference($profile.expected_salary)} / year</dd>
               </div>
               <div>
                 <dt>Notice period</dt>

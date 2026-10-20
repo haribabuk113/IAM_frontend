@@ -544,7 +544,7 @@
   border-radius: 9px;
   padding: 5px;
 }
-.landing_refresh .search_input_row label {
+.landing_refresh .search_input_row > label {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -552,10 +552,10 @@
   color: var(--muted);
   min-width: 0;
 }
-.landing_refresh .search_input_row label:first-child {
+.landing_refresh .search_input_row > label:first-child {
   border-right: 1px solid var(--line);
 }
-.landing_refresh .search_input_row input {
+.landing_refresh .search_input_row > label > input {
   border: 0;
   outline: none;
   background: none;
@@ -564,7 +564,7 @@
   font-size: 12px;
   color: var(--ink);
 }
-.landing_refresh .search_input_row input::placeholder {
+.landing_refresh .search_input_row > label > input::placeholder {
   color: var(--muted);
 }
 .landing_refresh .search_input_row .r_button {
@@ -1960,11 +1960,11 @@
   .landing_refresh .search_input_row {
     grid-template-columns: 1.1fr 1fr auto;
   }
-  .landing_refresh .search_input_row label {
+  .landing_refresh .search_input_row > label {
     padding: 0 12px;
     gap: 8px;
   }
-  .landing_refresh .search_input_row input {
+  .landing_refresh .search_input_row > label > input {
     font-size: 10px;
   }
   .landing_refresh .search_input_row .r_button {
@@ -2360,13 +2360,13 @@
     padding: 0;
     gap: 9px;
   }
-  .landing_refresh .search_input_row label,
-  .landing_refresh .search_input_row label:first-child {
+  .landing_refresh .search_input_row > label,
+  .landing_refresh .search_input_row > label:first-child {
     border: 1px solid var(--line);
     border-radius: 6px;
     padding-inline: 12px;
   }
-  .landing_refresh .search_input_row input {
+  .landing_refresh .search_input_row > label > input {
     font-size: 12px;
     height: 44px;
   }

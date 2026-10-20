@@ -10,8 +10,8 @@
       .filter((e) => e.end)
       .map((e) => ({
         label: e.end,
-        title: e.degree,
-        detail: e.institution || "Graduation",
+        title: "Graduation",
+        detail: [e.degree, e.institution].filter(Boolean).join(" · "),
         href: "#profile-background",
       }));
     items.forEach((item, i) => {
@@ -41,13 +41,27 @@
 
 <div class="career_path" aria-label="Career journey">
   <span class="career_path_label">EVERY CHAPTER COUNTS</span>
-  <div class="career_path_steps">
-    {#each steps as step, i}<a href={`/profile${public_preview ? "?public=1" : ""}${step.href}`} style={`--step:${i}`}
-        ><span class="journey_dot">{i === 0 ? "✳" : "•"}</span><span
-          >{step.label}</span
-        ><span class="journey_tip"
-          ><strong>{step.title}</strong><small>{step.detail}</small></span
-        ></a
-      >{/each}
-  </div>
+  <ol
+    class="career_path_steps"
+    class:extended={steps.length > 3}
+    style={`--milestone_count:${Math.max(steps.length, 1)}`}
+  >
+    {#each steps as step, i}
+      <li>
+        <a
+          class="journey_step"
+          href={`/profile${public_preview ? "?public=1" : ""}${step.href}`}
+          style={`--step:${i}`}
+          title={`${step.title} · ${step.label} — ${step.detail}`}
+        >
+          <span class="journey_dot" aria-hidden="true"
+            >{i === 0 ? "✳" : "•"}</span
+          >
+          <strong class="journey_title">{step.title}</strong>
+          <span class="journey_date">{step.label}</span>
+          <span class="journey_detail">{step.detail}</span>
+        </a>
+      </li>
+    {/each}
+  </ol>
 </div>
