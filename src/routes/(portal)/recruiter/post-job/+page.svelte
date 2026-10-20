@@ -37,7 +37,8 @@
           ...job,
           modes: job.modes || [job.mode],
           types: job.types || [job.type],
-          locations: job.locations || ["in-blr"],
+          locations: job.locations || job.location_ids || [],
+          worldwide: job.worldwide || job.location_type === "world_remote",
           description: job.description || job.summary || "",
           company_name: job.company_name || "",
           min_experience: job.min_experience ?? job.experience_years ?? 0,
@@ -81,6 +82,7 @@
     const post = {
       ...normalise_job_post({ ...form, company_name }),
       id,
+      poster_id: "preview-alex",
       status,
       applicants: existing?.applicants || 0,
       views: existing?.views || 0,
@@ -242,6 +244,8 @@
           <fieldset>
             <legend>Eligible work locations *</legend><Location_picker
               bind:selected={form.locations}
+              bind:worldwide={form.worldwide}
+              allow_worldwide
             />
           </fieldset>
         </section>

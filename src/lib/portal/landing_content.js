@@ -95,7 +95,7 @@ export const preview_topics = {
   },
   install: {
     title: "A little closer to your next chapter.",
-    text: "The planned PWA includes offline job queuing, background synchronization on slower connections, interview push notifications, biometric authentication, and continuity across desktop and mobile. These are requirements for the future app; this UI preview is not installable yet.",
+    text: "Use Install app in the header to add Referise to your device. Installation and shared-link handling depend on your browser. Offline job queuing, background sync, push notifications and biometric authentication still need their backend integrations.",
     action: "Explore opportunities",
     href: "/jobs",
   },

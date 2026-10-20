@@ -9,7 +9,12 @@
   import Notice from "$lib/portal/preview_notice.svelte";
   import Empty from "$lib/portal/empty_state.svelte";
   import { location_name } from "$lib/portal/filter_options.js";
-  $: job = $recruitment_jobs.find((j) => j.id === $page.params.id);
+  $: public_preview = $page.url.searchParams.get("public") === "1";
+  $: job = $recruitment_jobs.find(
+    (j) =>
+      j.id === $page.params.id &&
+      (!public_preview || (j.status === "Active" && !j.unlisted)),
+  );
 </script>
 
 <svelte:head
@@ -40,14 +45,14 @@
           {#each job.skills as skill}<span class="workspace_badge">{skill}</span
             >{/each}
         </div>
-        <div class="workspace_actions">
-          <a
-            class="button button_dark"
-            href={`/recruiter/post-job?edit=${job.id}`}>Edit job</a
-          ><a class="button button_outline" href="/recruiter/jobs"
-            >Manage jobs</a
-          >
-        </div>
+        {#if !public_preview}<div class="workspace_actions">
+            <a
+              class="button button_dark"
+              href={`/recruiter/post-job?edit=${job.id}`}>Edit job</a
+            ><a class="button button_outline" href="/recruiter/jobs"
+              >Manage jobs</a
+            >
+          </div>{/if}
       </section>
       <aside class="workspace_panel">
         <h2>The details</h2>

@@ -51,7 +51,7 @@ test("auth pages and server actions follow the IAM contract", async (context) =>
 
   for (const [route, heading] of [
     ["/login", "Welcome back."],
-    ["/signup", "Your next chapter"],
+    ["/signup", "Make yourself known."],
     ["/auth/check-email", "Check your inbox."],
     ["/auth/help", "Forgot your password?"],
   ]) {
@@ -68,62 +68,22 @@ test("auth pages and server actions follow the IAM contract", async (context) =>
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("location"), destination);
   }
-  const invalid = await post("/signup", {
-    ...values,
-    confirm_password: "mismatch",
-  });
-  assert.equal(invalid.status, 400);
-  const invalid_html = await invalid.text();
-  assert.ok(invalid_html.includes("passwords don’t match"));
-  assert.ok(!invalid_html.includes(values.password));
-  assert.equal(requests.length, 0);
-
-  const failed = await post("/login", values);
-  assert.equal(failed.status, 401);
-  const failed_html = await failed.text();
-  assert.ok(failed_html.includes("email or password is incorrect"));
-  assert.ok(!failed_html.includes(values.password));
-  assert.equal(requests.at(-1).path, "/signin");
-  assert.deepEqual(Object.keys(requests.at(-1).body).sort(), [
-    "email",
-    "password",
-  ]);
-
-  reply_status = 202;
-  reply_body = { status: "confirmation_required" };
-  const confirmation = await post("/signup", values);
-  assert.equal(confirmation.status, 303);
-  assert.equal(confirmation.headers.get("location"), "/auth/check-email");
-  assert.ok(!confirmation.headers.get("set-cookie").includes("iam_token"));
-  assert.ok(
-    confirmation.headers
-      .get("set-cookie")
-      .includes("auth_confirmation_pending=1"),
-  );
-  assert.deepEqual(Object.keys(requests.at(-1).body).sort(), [
-    "email",
-    "full_name",
-    "password",
-  ]);
-
-  reply_status = 200;
-  reply_body = {
-    access_token: "local-test-session",
-    expires_at: new Date(Date.now() + 600000).toISOString(),
-  };
-  const success = await post("/login", values);
-  assert.equal(success.status, 303);
-  assert.equal(success.headers.get("location"), "/account");
-  const cookie = success.headers.get("set-cookie");
-  assert.ok(cookie.includes("iam_token=local-test-session"));
-  assert.ok(cookie.includes("HttpOnly"));
-  assert.ok(cookie.includes("SameSite=Lax"));
-  const count = requests.length;
-  const cross_origin = await post(
-    "/signup",
-    values,
-    "https://untrusted.example",
-  );
-  assert.equal(cross_origin.status, 403);
-  assert.equal(requests.length, count);
+  for (const route of ["/login", "/signup"]) {
+    const response = await post(route, values);
+    assert.equal(response.status, 405, "Password actions are not available");
+    const html = await (await fetch(origin + route)).text();
+    assert.ok(!html.includes('type="password"'));
+    for (const provider of [
+      "Google",
+      "Microsoft",
+      "LinkedIn",
+      "Facebook",
+      "GitHub",
+      "Discord",
+      "GitLab",
+      "Snapchat",
+    ])
+      assert.ok(html.includes(provider));
+  }
+  assert.equal(requests.length, 0, "No password request reaches IAM");
 });

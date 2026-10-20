@@ -1,4 +1,70 @@
 <script>
+  import { browser } from "$app/environment";
+  import Profile_journey from "$lib/portal/profile_journey.svelte";
+  import Social_icon from "$lib/portal/social_icon.svelte";
+  import Posting_analytics from "$lib/portal/posting_analytics.svelte";
+  import Job_card from "$lib/portal/job_card.svelte";
+  import { recruitment_jobs } from "$lib/portal/workspace_state.js";
+  import { jobs_by_poster } from "$lib/portal/posted_jobs.js";
+  import {
+    membership_open,
+    premium_active,
+    preview_account,
+  } from "$lib/portal/membership_state.js";
+  import { viewing_currency } from "$lib/portal/state.js";
+  import { preview_rates, to_inr } from "$lib/portal/currency.js";
+  let analytics_tab = "profile";
+  let membership_query_seen = false;
+  $: if (
+    browser &&
+    $page.url.searchParams.get("membership") === "1" &&
+    !membership_query_seen
+  ) {
+    membership_open.set(true);
+    membership_query_seen = true;
+  }
+  $: posted_jobs = jobs_by_poster(
+    $recruitment_jobs,
+    "preview-alex",
+    public_preview,
+  );
+  $: format_preference = (amount) =>
+    new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: $viewing_currency,
+      maximumFractionDigits: 0,
+    }).format(
+      to_inr(amount || 0, $profile.salary_currency) /
+        preview_rates[$viewing_currency],
+    );
+  async function copy_resume() {
+    if ($profile.resume_private) {
+      toast(
+        "Make your résumé public in Preferences before sharing its preview link.",
+      );
+      return;
+    }
+    share_url = `${window.location.origin}/profile?public=1&resume=1`;
+    try {
+      await navigator.clipboard.writeText(share_url);
+      toast(
+        "Résumé preview link copied. Uploaded files are only available in this browser session.",
+      );
+    } catch {
+      sharing = true;
+    }
+  }
+  let resume_query_seen = false;
+  $: if (
+    $page.url.searchParams.get("resume") === "1" &&
+    !resume_query_seen &&
+    !$profile.resume_private &&
+    $profile.visible
+  ) {
+    resume_open = true;
+    resume_query_seen = true;
+  }
+
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { onDestroy as on_destroy } from "svelte";
@@ -86,7 +152,7 @@
       text: "Hide the résumé from visitors to your public profile.",
     },
   ];
-  $: current_tab = ["overview", "activity", "preferences"].includes(
+  $: current_tab = ["overview", "activity", "preferences", "jobs"].includes(
     $page.url.searchParams.get("tab") ?? "",
   )
     ? $page.url.searchParams.get("public") === "1" &&
@@ -277,6 +343,11 @@
         {public_preview ? "Your public profile." : "Make yourself known."}
       </h1>
     </div>
+    {#if !public_preview}<button
+        class="button button_outline button_small edit_profile_button"
+        on:click={() => edit("profile")}
+        ><Icon name="edit" size={14} />Edit profile</button
+      >{/if}
     <button
       class="button button_outline button_small"
       on:click={() => {
@@ -310,41 +381,34 @@
       >
     </section>
   {:else}<section class="profile_identity_card">
-      <div class="profile_cover">
-        <svg
-          viewBox="0 0 1200 150"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden="true"
-          ><path
-            d="M775 220V90a150 150 0 0 1 300 0v130"
-            fill="none"
-            stroke="#8da4ff"
-            stroke-width="32"
-          /><path
-            d="M820 220V92a105 105 0 0 1 210 0v128"
-            fill="none"
-            stroke="#6080ff"
-            stroke-width="21"
-          /><circle cx="1084" cy="6" r="95" fill="#dfff8c" /><path
-            d="M60 150C180-55 410 170 560 10"
-            fill="none"
-            stroke="#c5d1ff"
-            stroke-width="1"
-            stroke-dasharray="3 6"
-          /></svg
-        ><span>THERE’S MORE TO YOUR STORY.</span><span
-          class="profile_cover_companion"
-          aria-hidden="true"><Companion kind="peach" size={145} /></span
-        ><span class="cover_star">✳</span>
+      <div class="profile_cover journey_cover">
+        <Profile_journey profile={$profile} {public_preview} />
       </div>
       <div class="profile_identity_body">
-        <Profile_photo {initials} readonly={public_preview} />
+        <Profile_photo
+          {initials}
+          readonly={public_preview}
+          premium={$premium_active}
+        />
         <div class="profile_identity_main">
           <div class="profile_name_row">
             <h2>{$profile.name}</h2>
-            {#if $profile.open}<span class="open_to_work"
-                ><span></span>Open to opportunities</span
-              >{/if}
+            <a
+              class="profile_mini_analytics"
+              href={public_preview
+                ? "/profile?public=1&tab=activity"
+                : "/profile?tab=activity"}
+              ><strong>62 <span>views this week</span></strong><svg
+                viewBox="0 0 80 24"
+                aria-hidden="true"
+                ><path
+                  d="M1 22L13 18L25 20L38 11L50 14L63 5L78 2"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                /></svg
+              ><small>Sample insights</small></a
+            >
           </div>
           <p class="profile_title">
             {$profile.title}{#if $profile.pronouns}<small>
@@ -352,11 +416,7 @@
               >{/if}
           </p>
           {#if $profile.social_links.length}<div class="profile_meta">
-              {#each $profile.social_links as link}<a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer">{link.platform} ↗</a
-                >{/each}
+              {#each $profile.social_links as link}<Social_icon {link} />{/each}
             </div>{/if}
           <div class="profile_meta">
             <span><Icon name="location" size={14} />{$profile.location}</span
@@ -368,21 +428,36 @@
             >
           </div>
         </div>
+      </div>
+      <div class="profile_contact_actions">
+        {#if !public_preview && $premium_active}<span class="premium_status"
+            >Premium preview active · until {new Date(
+              $preview_account.premium_until,
+            ).toLocaleDateString()}</span
+          >{/if}
+        {#if !public_preview || !$profile.contact_private}<a
+            href={`mailto:${$profile.email}`}>{$profile.email}</a
+          >{#if $profile.phone}<a href={`tel:${$profile.phone}`}
+              >{$profile.phone}</a
+            >{/if}{/if}
+        {#if !public_preview || !$profile.resume_private}<button
+            class="text_link"
+            on:click={() => (resume_open = true)}>View résumé ↗</button
+          >{/if}
+        <button class="text_link" on:click={share}>Copy profile link</button>
+        {#if !public_preview || !$profile.resume_private}<button
+            class="text_link"
+            on:click={copy_resume}>Copy résumé link</button
+          >{/if}
         {#if !public_preview}<button
-            class="button button_outline button_small edit_profile_button"
-            on:click={() => edit("profile")}
-            ><Icon name="edit" size={14} />Edit profile</button
+            class="text_link"
+            on:click={() => membership_open.set(true)}>Membership ↗</button
           >{/if}
       </div>
-      {#if !public_preview}<a
-          class="text_link"
-          style="margin: 0 28px 20px; font-size: 12px"
-          href="/profile?tab=activity"
-          >62 profile views this week · Sample insights <Icon
-            name="arrow-right"
-            size={13}
-          /></a
-        >{/if}
+      {#if !public_preview}<p class="profile_link_note">
+          Links share the design preview. Uploaded résumés still need file
+          hosting.
+        </p>{/if}
       <div class="profile_navigation">
         <nav aria-label="Profile sections">
           <a
@@ -396,7 +471,13 @@
             class:active={current_tab === "activity"}
             >Activity & insights <span class="tab_dot"></span></a
           >
-          {#if !public_preview}<a href="/recruiter/jobs">Jobs posted by me</a><a
+          <a
+            href={public_preview
+              ? "/profile?public=1&tab=jobs"
+              : "/profile?tab=jobs"}
+            class:active={current_tab === "jobs"}
+            >{public_preview ? "Jobs posted" : "Jobs posted by me"}</a
+          >{#if !public_preview}<a
               href="/profile?tab=preferences"
               class:active={current_tab === "preferences"}>Preferences</a
             >{/if}
@@ -447,6 +528,7 @@
             </div>
             <div class="experience_timeline">
               {#each $profile.experiences as experience, experience_index}<article
+                  id={`experience-${experience_index}`}
                 >
                   <span class="resume_file_icon"
                     ><Icon name="building" size={24} /></span
@@ -462,7 +544,10 @@
                     </div>
                     <p class="experience_company">
                       {experience.company} <span>{experience.type}</span><span
-                        >{experience.verification}</span
+                        >{#if experience.verification === "Verified"}<span
+                            class="verified_employment"
+                            ><Icon name="shield" size={13} />Employer verified</span
+                          >{:else if !public_preview}{experience.verification}{/if}</span
                       >
                     </p>
                     {#if experience.promoted}<span class="promoted_tag"
@@ -504,31 +589,6 @@
                   </div>
                 </article>{/each}
             </div>
-            <dl class="requirement_facts">
-              <div>
-                <dt>Languages</dt>
-                <dd>
-                  {$profile.languages
-                    .map(
-                      (language) =>
-                        `${language.name} · ${language.proficiency}`,
-                    )
-                    .join(", ") || "Not added"}
-                </dd>
-              </div>
-              <div>
-                <dt>Work authorization</dt>
-                <dd>
-                  {#each $profile.authorizations as authorization}<p>
-                      {authorization.country} · {authorization.type}<br /><small
-                        >{authorization.indefinite
-                          ? "No expiry"
-                          : `Valid until ${authorization.until}`}</small
-                      >
-                    </p>{:else}Not added{/each}
-                </dd>
-              </div>
-            </dl>
           </section>
           <section class="profile_section">
             <div class="profile_section_heading">
@@ -575,126 +635,146 @@
               >
             </div>
           </section>
-          <section class="profile_section education_section">
-            <div class="profile_section_heading">
-              <h2>Where it began</h2>
-              <span class="section_label">EDUCATION</span>
-            </div>
-            <div class="education_row">
-              <span><Icon name="building" size={23} /></span>
-              <div>
-                {#each $profile.education as education}<h3>
-                    {education.degree}
-                  </h3>
-                  <p>
-                    {education.institution}{education.institution
-                      ? " · "
-                      : ""}{education.field} · {education.start}–{education.end}
-                  </p>{:else}<p>Education not added.</p>{/each}
-              </div>
-            </div>
-          </section>
-        {:else if current_tab === "activity"}
+        {:else if current_tab === "jobs"}
           <section class="profile_section">
             <div class="profile_section_heading">
-              <h2>Your story is finding its people.</h2>
-              <span class="section_label">SAMPLE INSIGHTS</span>
+              <h2>
+                {public_preview
+                  ? "Opportunities I’ve shared"
+                  : "Jobs posted by me"}
+              </h2>
+              {#if !public_preview}<a class="text_link" href="/recruiter/jobs"
+                  >Manage jobs ↗</a
+                >{/if}
             </div>
-            <div class="profile_stats">
-              <div>
-                <Icon name="eye" size={19} /><strong>62</strong><span
-                  >Profile views</span
-                ><small>+18% this week</small>
-              </div>
-              <div>
-                <Icon name="file" size={19} /><strong>18</strong><span
-                  >Résumé views</span
-                ><small>+8% this week</small>
-              </div>
-              <div>
-                <Icon name="briefcase" size={19} /><strong>6</strong><span
-                  >Résumé downloads</span
-                ><small>Illustrative weekly total</small>
-              </div>
-            </div>
-            <div class="profile_chart">
-              <div>
-                <strong>A little more visible, every week.</strong><span
-                  >Illustrative engagement</span
-                >
-              </div>
-              <svg
-                viewBox="0 0 640 170"
-                role="img"
-                aria-label="Illustrative seven-day engagement: 62 profile views, 18 résumé views and 6 downloads"
-                ><path
-                  d="M30 25h576M30 65h576M30 105h576M30 145h576"
-                  stroke="#dce1ef"
-                  stroke-dasharray="3 4"
-                />{#each [{ values: weekly_views, color: "#3155ef" }, { values: weekly_resume_views, color: "#55734a" }, { values: weekly_downloads, color: "#ac603a" }] as series}<polyline
-                    points={chart_points(series.values)}
-                    fill="none"
-                    stroke={series.color}
-                    stroke-width="2.5"
-                  />{/each}<g font-size="10" fill="currentColor"
-                  >{#each week_days as day, index}<text
-                      x={22 + index * 96}
-                      y="168">{day}</text
-                    >{/each}</g
-                ></svg
-              >
-              <p class="small_text">
-                Blue: profile views · Green: résumé views · Copper: downloads
-              </p>
-              <details>
-                <summary class="small_text">View chart data</summary>
-                <table class="weekly_analytics_table">
-                  <thead
-                    ><tr
-                      ><th>Day</th><th>Profile views</th><th>Résumé views</th
-                      ><th>Downloads</th></tr
-                    ></thead
-                  ><tbody
-                    >{#each week_days as day, index}<tr
-                        ><td>{day}</td><td>{weekly_views[index]}</td><td
-                          >{weekly_resume_views[index]}</td
-                        ><td>{weekly_downloads[index]}</td></tr
-                      >{/each}</tbody
-                  >
-                </table>
-              </details>
+            <p class="small_text">
+              Active sample listings{public_preview
+                ? ""
+                : " · Includes your direct-link listings"}.
+            </p>
+            <div class="profile_posted_jobs">
+              {#each posted_jobs as job}<Job_card
+                  {job}
+                  href={jobs.some((j) => j.id === job.id)
+                    ? `/jobs/${job.id}`
+                    : `/recruiter/jobs/${job.id}${public_preview ? "?public=1" : ""}`}
+                />{:else}<p>No active jobs to show.</p>{/each}
             </div>
           </section>
-          {#if !public_preview}<section class="profile_section">
+        {:else if current_tab === "activity"}<div class="analytics_tabs">
+            <button
+              class:active={analytics_tab === "profile"}
+              on:click={() => (analytics_tab = "profile")}
+              >Profile · 7 days</button
+            ><button
+              class:active={analytics_tab === "jobs"}
+              on:click={() => (analytics_tab = "jobs")}>Job posting</button
+            >
+          </div>
+          {#if analytics_tab === "jobs"}<Posting_analytics />{:else}
+            <section class="profile_section">
               <div class="profile_section_heading">
-                <h2>The doors you’ve opened</h2>
-                <span class="section_label"
-                  >{$applications.length} PREVIEW APPLICATIONS</span
-                >
+                <h2>Your story is finding its people.</h2>
+                <span class="section_label">SAMPLE INSIGHTS</span>
               </div>
-              {#if applied_jobs.length}<div class="application_list">
-                  {#each applied_jobs as job}<a href={`/jobs/${job.id}`}
-                      ><Company_logo id={job.company} size={40} />
-                      <div>
-                        <h3>{job.title}</h3>
-                        <p>{get_company(job.company).name} · {job.location}</p>
-                      </div>
-                      <span
-                        ><Icon name="check" size={12} />Saved in preview</span
-                      ><Icon name="arrow-up-right" size={17} /></a
-                    >{/each}
-                </div>{:else}<div class="activity_empty">
-                  <Icon name="briefcase" size={29} />
-                  <h3>Your next move is out there.</h3>
-                  <p>When you try an application, you’ll see it here.</p>
-                  <a href="/jobs" class="text_link"
-                    >Explore opportunities <Icon
-                      name="arrow-right"
-                      size={15}
-                    /></a
+              <div class="profile_stats">
+                <div>
+                  <Icon name="eye" size={19} /><strong>62</strong><span
+                    >Profile views</span
+                  ><small>+18% this week</small>
+                </div>
+                <div>
+                  <Icon name="file" size={19} /><strong>18</strong><span
+                    >Résumé views</span
+                  ><small>+8% this week</small>
+                </div>
+                <div>
+                  <Icon name="briefcase" size={19} /><strong>6</strong><span
+                    >Résumé downloads</span
+                  ><small>Illustrative weekly total</small>
+                </div>
+              </div>
+              <div class="profile_chart">
+                <div>
+                  <strong>A little more visible, every week.</strong><span
+                    >Illustrative engagement</span
                   >
-                </div>{/if}
-            </section>{/if}
+                </div>
+                <svg
+                  viewBox="0 0 640 170"
+                  role="img"
+                  aria-label="Illustrative seven-day engagement: 62 profile views, 18 résumé views and 6 downloads"
+                  ><path
+                    d="M30 25h576M30 65h576M30 105h576M30 145h576"
+                    stroke="#dce1ef"
+                    stroke-dasharray="3 4"
+                  />{#each [{ values: weekly_views, color: "#3155ef" }, { values: weekly_resume_views, color: "#55734a" }, { values: weekly_downloads, color: "#ac603a" }] as series}<polyline
+                      points={chart_points(series.values)}
+                      fill="none"
+                      stroke={series.color}
+                      stroke-width="2.5"
+                    />{/each}<g font-size="10" fill="currentColor"
+                    >{#each week_days as day, index}<text
+                        x={22 + index * 96}
+                        y="168">{day}</text
+                      >{/each}</g
+                  ></svg
+                >
+                <p class="small_text">
+                  Blue: profile views · Green: résumé views · Copper: downloads
+                </p>
+                <details>
+                  <summary class="small_text">View chart data</summary>
+                  <table class="weekly_analytics_table">
+                    <thead
+                      ><tr
+                        ><th>Day</th><th>Profile views</th><th>Résumé views</th
+                        ><th>Downloads</th></tr
+                      ></thead
+                    ><tbody
+                      >{#each week_days as day, index}<tr
+                          ><td>{day}</td><td>{weekly_views[index]}</td><td
+                            >{weekly_resume_views[index]}</td
+                          ><td>{weekly_downloads[index]}</td></tr
+                        >{/each}</tbody
+                    >
+                  </table>
+                </details>
+              </div>
+            </section>
+            {#if !public_preview}<section class="profile_section">
+                <div class="profile_section_heading">
+                  <h2>The doors you’ve opened</h2>
+                  <span class="section_label"
+                    >{$applications.length} PREVIEW APPLICATIONS</span
+                  >
+                </div>
+                {#if applied_jobs.length}<div class="application_list">
+                    {#each applied_jobs as job}<a href={`/jobs/${job.id}`}
+                        ><Company_logo id={job.company} size={40} />
+                        <div>
+                          <h3>{job.title}</h3>
+                          <p>
+                            {get_company(job.company).name} · {job.location}
+                          </p>
+                        </div>
+                        <span
+                          ><Icon name="check" size={12} />Saved in preview</span
+                        ><Icon name="arrow-up-right" size={17} /></a
+                      >{/each}
+                  </div>{:else}<div class="activity_empty">
+                    <Icon name="briefcase" size={29} />
+                    <h3>Your next move is out there.</h3>
+                    <p>When you try an application, you’ll see it here.</p>
+                    <a href="/jobs" class="text_link"
+                      >Explore opportunities <Icon
+                        name="arrow-right"
+                        size={15}
+                      /></a
+                    >
+                  </div>{/if}
+              </section>{/if}
+          {/if}
         {:else}
           <section class="profile_section">
             <div class="profile_section_heading">
@@ -764,6 +844,60 @@
         {/if}
       </div>
       <aside class="profile_sidebar">
+        <section id="profile-background" class="profile_side_card">
+          <div class="side_card_heading">
+            <h2>Background</h2>
+            {#if !public_preview}<button
+                class="icon_button"
+                aria-label="Edit background"
+                on:click={() => edit("background")}
+                ><Icon name="edit" size={15} /></button
+              >{/if}
+          </div>
+          <dl class="requirement_facts">
+            <div>
+              <dt>Languages</dt>
+              <dd>
+                {$profile.languages
+                  .map(
+                    (language) => `${language.name} · ${language.proficiency}`,
+                  )
+                  .join(", ") || "Not added"}
+              </dd>
+            </div>
+            <div>
+              <dt>Work authorization</dt>
+              <dd>
+                {#each $profile.authorizations as authorization}<p>
+                    {authorization.country} · {authorization.type}<br /><small
+                      >{authorization.indefinite
+                        ? "No expiry"
+                        : `Valid until ${authorization.until}`}</small
+                    >
+                  </p>{:else}Not added{/each}
+              </dd>
+            </div>
+          </dl>
+          <div class="sidebar_education">
+            <div class="profile_section_heading">
+              <h2>Where it began</h2>
+              <span class="section_label">EDUCATION</span>
+            </div>
+            <div class="education_row">
+              <span><Icon name="building" size={23} /></span>
+              <div>
+                {#each $profile.education as education}<h3>
+                    {education.degree}
+                  </h3>
+                  <p>
+                    {education.institution}{education.institution
+                      ? " · "
+                      : ""}{education.field} · {education.start}–{education.end}
+                  </p>{:else}<p>Education not added.</p>{/each}
+              </div>
+            </div>
+          </div>
+        </section>
         {#if !public_preview}<section class="profile_strength_card">
             <div>
               <span class="eyebrow_label">A LITTLE MORE YOU</span><span
@@ -796,6 +930,14 @@
                 ><Icon name="edit" size={15} /></button
               >{/if}
           </div>
+          <label class="preference_currency"
+            >Display currency<select
+              aria-label="Profile display currency"
+              bind:value={$viewing_currency}
+              ><option>INR</option><option>USD</option><option>EUR</option
+              ><option>GBP</option></select
+            ></label
+          ><small class="small_text">Illustrative exchange rates.</small>
           <dl class="career_preferences">
             <div>
               <dt><Icon name="briefcase" size={14} />LOOKING FOR</dt>
@@ -806,9 +948,9 @@
               <dd>{$profile.work_mode}</dd>
             </div>
             {#if !public_preview || !$profile.salary_private}<div>
-                <dt><Icon name="money" size={14} />EXPECTED COMPENSATION</dt>
+                <dt><Icon name="money" size={14} />MINIMUM EXPECTED SALARY</dt>
                 <dd>
-                  {$profile.expected}{#if $profile.salary_private}<span
+                  {format_preference($profile.expected_salary)} / year{#if $profile.salary_private}<span
                       class="private_label"
                       ><Icon name="lock" size={10} />Only you</span
                     >{/if}
@@ -846,12 +988,12 @@
                   {$profile.current_salary.toLocaleString()} / year
                 </dd>
               </div>{/if}
-            {#if $profile.hourly_rate && (!public_preview || !$profile.hourly_private)}<div
-              >
-                <dt>HOURLY RATE</dt>
+            {#if !public_preview || !$profile.hourly_private}<div>
+                <dt>HOURLY GIG RATE</dt>
                 <dd>
-                  {$profile.salary_currency}
-                  {$profile.hourly_rate.toLocaleString()} / hour
+                  {$profile.hourly_rate
+                    ? `${format_preference($profile.hourly_rate)} / hour`
+                    : "Not specified"}
                 </dd>
               </div>{/if}
           </dl>

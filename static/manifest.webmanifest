@@ -1,0 +1,12 @@
+{
+  "id": "/", "name": "Referise — Your next chapter", "short_name": "Referise",
+  "description": "Find work, build your profile and meet your next team.",
+  "start_url": "/jobs", "scope": "/", "display": "standalone",
+  "background_color": "#f5f7ff", "theme_color": "#3155ef",
+  "icons": [
+    {"src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "shortcuts": [{"name": "Find jobs", "url": "/jobs"}, {"name": "My profile", "url": "/profile"}]
+}

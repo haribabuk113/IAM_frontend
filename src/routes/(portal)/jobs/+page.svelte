@@ -1,4 +1,21 @@
 <script>
+  import Designation_picker from "$lib/portal/designation_picker.svelte";
+  import Location_search from "$lib/portal/location_search.svelte";
+  import { profile } from "$lib/portal/state.js";
+  import { allowed_filters } from "$lib/portal/membership_rules.js";
+  import {
+    membership_settings,
+    premium_active,
+  } from "$lib/portal/membership_state.js";
+  $: locked = (key) =>
+    !$premium_active && $membership_settings.premium_filters.includes(key);
+  $: effective_filters = allowed_filters(
+    applied_filters,
+    default_filters(),
+    $membership_settings,
+    $premium_active,
+  );
+
   import { closed_job_ids } from "$lib/portal/workspace_state.js";
   import { page } from "$app/stores";
   import { goto, afterNavigate as after_navigate } from "$app/navigation";
@@ -46,9 +63,10 @@
   }
   $: results = filter_jobs(
     jobs.filter((j) => !$closed_job_ids.includes(j.id)),
-    applied_filters,
+    effective_filters,
     $saved_jobs,
     $applications,
+    $profile.skills,
   );
   $: pending =
     filters_to_params(filters).toString() !==
@@ -59,15 +77,21 @@
     (current_page - 1) * page_size,
     current_page * page_size,
   );
-  $: active_filters = active_filter_labels(applied_filters);
+  $: active_filters = active_filter_labels(effective_filters);
   $: filter_count = active_filters.length;
   function sync() {
+    if (filters.locations.length || filters.worldwide) filters.location = "";
     const error = filter_error(filters);
     if (error) {
       toast(error);
       return;
     }
-    filters = filters_from_params(filters_to_params(filters));
+    filters = allowed_filters(
+      filters_from_params(filters_to_params(filters)),
+      default_filters(),
+      $membership_settings,
+      $premium_active,
+    );
     applied_filters = structuredClone(filters);
     search_filters.set(structuredClone(filters));
     viewing_currency.set(filters.currency);
@@ -168,19 +192,18 @@
         </div>
       </div>
       <form class="results_search" on:submit|preventDefault={sync}>
-        <label
-          ><Icon name="search" size={19} /><input
-            aria-label="Search job title, skill, or company"
-            bind:value={filters.query}
-            placeholder="Job title, skill, or company"
-          /></label
-        ><label
-          ><Icon name="location" size={18} /><input
-            aria-label="Search location"
-            bind:value={filters.location}
-            placeholder="City, country, or remote"
-          /></label
-        ><button type="submit" class="button button_terracotta"
+        <Designation_picker
+          bind:selected={filters.designations}
+          bind:query={filters.query}
+          disabled={locked("designations") || locked("query")}
+        /><Location_search
+          bind:selected={filters.locations}
+          bind:query={filters.location}
+          bind:worldwide={filters.worldwide}
+          disabled={locked("locations")}
+          disabled_worldwide={locked("worldwide")}
+        />
+        <button type="submit" class="button button_terracotta"
           >Find opportunities <Icon name="arrow-right" size={17} /></button
         >
       </form>
@@ -247,6 +270,7 @@
               >{/if}</button
           ><button
             class:active={filters.saved}
+            disabled={locked("saved")}
             class="quick_filter"
             aria-pressed={filters.saved}
             on:click={() => {
@@ -261,8 +285,13 @@
             ><span>Sort by</span><select
               aria-label="Sort opportunities"
               bind:value={filters.sort}
+              on:change={sync}
               ><option value="salary">Highest salary</option><option
                 value="newest">Newest first</option
+              ><option value="match" disabled={locked("sort_match")}
+                >Highest skill match{locked("sort_match")
+                  ? " · Premium"
+                  : ""}</option
               ></select
             ></label
           >

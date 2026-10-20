@@ -1,4 +1,6 @@
 <script>
+  import Skill_line from "./skill_line.svelte";
+  let all_open = false;
   import { profile, toast } from "./state.js";
   import Modal from "./modal.svelte";
   import { jobs } from "./data.js";
@@ -79,10 +81,19 @@
 </div>
 {#each displayed as group}<div style="margin-bottom:18px">
     <h3 style="font-size:13px;margin-bottom:12px">{group.name}</h3>
-    <div class="skill_chips profile_skills">
-      {#each group.skills as skill}<span>{skill}</span>{/each}
-    </div>
+    <Skill_line skills={group.skills} />
   </div>{/each}
+<button class="text_link" on:click={() => (all_open = true)}
+  >View all skills ({$profile.skills.length}) ↗</button
+>
+{#if all_open}<Modal
+    title="The full skill set"
+    on:close={() => (all_open = false)}
+    >{#each displayed as group}<h3>{group.name}</h3>
+      <div class="skill_chips">
+        {#each group.skills as skill}<span>{skill}</span>{/each}
+      </div>{/each}</Modal
+  >{/if}
 {#if editing}<Modal
     title="Make your skills your own"
     wide

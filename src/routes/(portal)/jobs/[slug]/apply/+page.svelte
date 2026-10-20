@@ -1,4 +1,6 @@
 <script>
+  import { record_preview_application } from "$lib/portal/membership_state.js";
+  import { application_snapshots } from "$lib/portal/state.js";
   import { focus_feedback } from "$lib/portal/focus_feedback.js";
   import { closed_job_ids } from "$lib/portal/workspace_state.js";
   import { page } from "$app/stores";
@@ -16,6 +18,7 @@
   import Empty from "$lib/portal/empty_state.svelte";
   let name = "",
     email = "",
+    phone = "",
     location = "",
     notice = "",
     expected = "",
@@ -28,6 +31,7 @@
   on_mount(() => {
     name = $profile.name;
     email = $profile.email;
+    phone = $profile.phone;
     location = $profile.location;
     notice = $profile.notice;
     expected = $profile.expected;
@@ -44,7 +48,19 @@
     error = "";
   }
   function submit() {
-    if (!consent) return;
+    if (!consent || $applications.includes(job.id)) return;
+    if (!record_preview_application()) return;
+    application_snapshots.update((items) => [
+      ...items,
+      {
+        job_id: job.id,
+        name,
+        email,
+        phone,
+        resume_name: $resume_file?.name || "Sample profile résumé",
+        created_at: new Date().toISOString(),
+      },
+    ]);
     applications.update((v) => (v.includes(job.id) ? v : [...v, job.id]));
     complete = true;
   }
@@ -122,6 +138,14 @@
               bind:value={email}
             /></label
           ><label class="field_label"
+            >Phone number *<input
+              class="field_input"
+              type="tel"
+              required
+              maxlength="30"
+              bind:value={phone}
+            /></label
+          ><label class="field_label"
             >Location *<input
               class="field_input"
               required
@@ -168,7 +192,9 @@
         {#if error}<p class="filter_error" role="alert">{error}</p>{/if}<label
           class="filter_checkbox"
           ><input type="checkbox" required bind:checked={consent} />I’ve
-          reviewed the details in this application preview.</label
+          reviewed these details. My phone number, email and résumé will be
+          included for the recruiter, regardless of my public profile
+          visibility. This preview sends nothing.</label
         >
         <div class="form_actions">
           <a class="button button_outline" href={`/jobs/${job.id}`}

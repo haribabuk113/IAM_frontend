@@ -2,6 +2,7 @@
   import { onDestroy as on_destroy } from "svelte";
   import { profile, toast } from "./state.js";
   import Modal from "./modal.svelte";
+  export let premium = false;
   export let readonly = false;
   export let initials = "";
   let editing = false;
@@ -60,7 +61,7 @@
   }
 </script>
 
-{#if readonly}<div class="profile_avatar">
+{#if readonly}<div class="profile_avatar" class:premium_avatar={premium}>
     {#if $profile.photo}<img
         src={$profile.photo}
         alt={$profile.name}
@@ -68,6 +69,7 @@
       />{:else}{initials}{/if}
   </div>{:else}<button
     class="profile_avatar"
+    class:premium_avatar={premium}
     aria-label="Edit profile photo"
     on:click={() => (editing = true)}
     >{#if $profile.photo}<img

@@ -427,7 +427,12 @@ export const jobs = job_fixtures.map((job, index) => ({
   unlisted: job.tier === "Free",
   designation_id: job.id,
   location_type: job.location === "Worldwide" ? "world_remote" : "specific",
-  location_ids: city_ids[job.location] ? [city_ids[job.location]] : [],
+  location_ids:
+    index === 2
+      ? ["in-bom", "in-blr"]
+      : city_ids[job.location]
+        ? [city_ids[job.location]]
+        : [],
   experience_years:
     { "Entry-level": 0, "Mid-level": 3, Senior: 5, Lead: 8 }[job.level] ?? 0,
   interview_rounds: [4, 3, 2][index % 3],

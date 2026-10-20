@@ -1,3 +1,4 @@
+import { skill_match } from "./membership_rules.js";
 import { get_company, jobs as sample_jobs, companies } from "./data.js";
 import {
   work_types,
@@ -87,7 +88,7 @@ const array_params = {
 };
 const number_params = {
   min_salary: "minSalary",
-  max_salary: "maxSalary",
+  min_match: "match",
   min_experience: "minExperience",
   max_experience: "maxExperience",
   rounds: "rounds",
@@ -105,7 +106,7 @@ export function default_filters() {
     sort: "newest",
     currency: "INR",
     min_salary: 0,
-    max_salary: 0,
+    min_match: 0,
     min_experience: 0,
     max_experience: "",
     rounds: "",
@@ -151,11 +152,14 @@ export function filters_from_params(params) {
   filters.currency = Object.hasOwn(preview_rates, params.get("currency"))
     ? params.get("currency")
     : "INR";
-  filters.sort = ["newest", "salary", "title", "recommended"].includes(
+  filters.sort = ["newest", "salary", "title", "recommended", "match"].includes(
     params.get("sort"),
   )
     ? params.get("sort")
     : "newest";
+  filters.min_match = [0, 50, 60, 70, 80, 90, 100].includes(filters.min_match)
+    ? filters.min_match
+    : 0;
   filters.round_match =
     params.get("roundMatch") === "exact" ? "exact" : "maximum";
   return filters;
@@ -186,8 +190,6 @@ export function filters_to_params(filters) {
   return params;
 }
 export function filter_error(filters) {
-  if (filters.max_salary > 0 && filters.min_salary > filters.max_salary)
-    return "Maximum salary must be at least the minimum salary.";
   if (
     filters.max_experience !== "" &&
     filters.max_experience != null &&
@@ -207,7 +209,13 @@ function distance(a, b) {
       Math.sin(radians(b.lng - a.lng) / 2) ** 2;
   return 6371 * 2 * Math.atan2(Math.sqrt(delta), Math.sqrt(1 - delta));
 }
-export function filter_jobs(jobs, input, saved = [], applied = []) {
+export function filter_jobs(
+  jobs,
+  input,
+  saved = [],
+  applied = [],
+  profile_skills = [],
+) {
   const filters = { ...default_filters(), ...input };
   if (filter_error(filters)) return [];
   const keywords = filters.query
@@ -224,12 +232,11 @@ export function filter_jobs(jobs, input, saved = [], applied = []) {
     )
       return false;
     const company = get_company(job.company);
-    const haystack = [job.title, company.name, job.category, ...job.skills]
-      .join(" ")
-      .toLowerCase();
+    const haystack = job.title.toLowerCase();
     if (keywords.some((word) => !haystack.includes(word))) return false;
     if (
       location &&
+      job.location_type !== "world_remote" &&
       !job.location.toLowerCase().includes(location) &&
       !(location === "remote" && job.mode === "Remote")
     )
@@ -262,7 +269,7 @@ export function filter_jobs(jobs, input, saved = [], applied = []) {
       )
         return false;
     }
-    if (filters.locations.length) {
+    if (filters.locations.length && job.location_type !== "world_remote") {
       const target = cities.find((city) => city.id === filters.locations[0]);
       if (
         !job.location_ids?.some(
@@ -300,24 +307,29 @@ export function filter_jobs(jobs, input, saved = [], applied = []) {
     )
       return false;
     // Hidden amounts are never shipped to the browser; salary matching for those jobs needs the API.
-    if (filters.min_salary || filters.max_salary) {
+    if (filters.min_salary) {
       if (job.salary_hidden || job.salary_max == null) return false;
       if (
         to_inr(job.salary_max, job.currency) <
         to_inr(filters.min_salary || 0, filters.currency)
       )
         return false;
-      if (
-        filters.max_salary &&
-        to_inr(job.salary_min ?? 0, job.currency) >
-          to_inr(filters.max_salary, filters.currency)
-      )
-        return false;
     }
+    if (
+      filters.min_match &&
+      skill_match(job, profile_skills) < filters.min_match
+    )
+      return false;
     return true;
   });
   const recent = (a, b) => a.posted - b.posted || a.id.localeCompare(b.id);
-  if (filters.sort === "salary")
+  if (filters.sort === "match")
+    result.sort(
+      (a, b) =>
+        skill_match(b, profile_skills) - skill_match(a, profile_skills) ||
+        recent(a, b),
+    );
+  else if (filters.sort === "salary")
     result.sort(
       (a, b) =>
         (b.salary_hidden ? -1 : to_inr(b.salary_max ?? 0, b.currency)) -
@@ -358,10 +370,7 @@ export function active_filter_labels(filters) {
       "min_salary",
       `From ${filters.min_salary?.toLocaleString()} ${filters.currency}`,
     ],
-    [
-      "max_salary",
-      `Up to ${filters.max_salary?.toLocaleString()} ${filters.currency}`,
-    ],
+    ["min_match", `${filters.min_match}%+ skill match`],
     ["min_experience", `${filters.min_experience}+ years`],
     ["max_experience", `Up to ${filters.max_experience} years`],
     [

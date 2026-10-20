@@ -6,6 +6,13 @@
   import "$lib/portal/cobalt_pages.css";
   import "$lib/portal/requirement_fields.css";
   import "$lib/portal/workspace.css";
+  import "$lib/portal/refinements.css";
+  import Membership_panel from "$lib/portal/membership_panel.svelte";
+  import {
+    hydrate_membership,
+    membership_open,
+    membership_clock,
+  } from "$lib/portal/membership_state.js";
   import Header from "$lib/portal/header.svelte";
   import Footer from "$lib/portal/footer.svelte";
   import Icon from "$lib/portal/icon.svelte";
@@ -14,12 +21,18 @@
   let offline = false;
   hydrate_preview();
   hydrate_workspace();
+  hydrate_membership();
   on_mount(() => {
+    const clock_timer = setInterval(
+      () => membership_clock.set(Date.now()),
+      30000,
+    );
     const update = () => (offline = !navigator.onLine);
     update();
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
     return () => {
+      clearInterval(clock_timer);
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
     };
@@ -35,6 +48,7 @@
 >
 <div class="portal" class:cobalt_pages={$page.url.pathname !== "/"}>
   <Header />
+  {#if $membership_open}<Membership_panel />{/if}
   {#if offline}<div class="offline_notice" role="status">
       <Icon name="wifi" size={16} />You’re offline. Your saved preview is still
       here.

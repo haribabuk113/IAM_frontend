@@ -3,6 +3,8 @@
   export let size = 20;
   export let stroke = 1.7;
   const paths = {
+    code: "m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18",
+    camera: "M3 7h4l2-3h6l2 3h4v14H3V7Zm13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
     "arrow-right": "M4 12h16m-6-6 6 6-6 6",
     "arrow-up-right": "M6 18 18 6M6 6h12v12",
     "arrow-left": "M20 12H4m6-6-6 6 6 6",

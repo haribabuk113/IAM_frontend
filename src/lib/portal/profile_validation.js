@@ -80,6 +80,14 @@ export function restore_profile(stored, defaults) {
 }
 export function profile_error(profile) {
   if (
+    ["expected_salary", "current_salary", "hourly_rate"].some(
+      (key) =>
+        profile[key] !== undefined &&
+        (!Number.isFinite(Number(profile[key])) || Number(profile[key]) < 0),
+    )
+  )
+    return "Compensation must be a positive amount or zero.";
+  if (
     profile.name.trim().length < 2 ||
     profile.name.length > 100 ||
     !profile.title.trim()

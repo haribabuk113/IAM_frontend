@@ -43,7 +43,7 @@ test("every new filter survives a shareable URL round trip", () => {
     sort: "salary",
     currency: "USD",
     min_salary: 30000,
-    max_salary: 100000,
+    min_match: 70,
     min_experience: 2,
     max_experience: 8,
     rounds: 0,
@@ -60,7 +60,7 @@ test("malformed and obsolete URL options cannot inject invalid state", () => {
     ),
   );
   assert.equal(filters.min_salary, 0);
-  assert.equal(filters.max_salary, 0);
+  assert.equal(filters.max_salary, undefined);
   assert.equal(filters.rounds, "");
   assert.equal(filters.currency, "INR");
   assert.deepEqual(filters.modes, ["Remote"]);
@@ -99,8 +99,11 @@ test("city trees flatten to leaves and radius requires a single city", () => {
   );
   assert.equal(
     search({ locations: ["in-blr", "in-bom"] }).length,
-    jobs.filter((job) =>
-      !job.unlisted && ["Bengaluru, India", "Mumbai, India"].includes(job.location),
+    jobs.filter(
+      (job) =>
+        !job.unlisted &&
+        (["Bengaluru, India", "Mumbai, India"].includes(job.location) ||
+          job.location_type === "world_remote"),
     ).length,
   );
   assert.ok(filter_error({ ...default_filters(), radius: 25 }));
@@ -126,18 +129,15 @@ test("salary ranges compare INR-normalized values, not currency labels", () => {
       currency: "USD",
     },
   ];
-  assert.equal(
-    search({ currency: "USD", min_salary: 110000, max_salary: 115000 }, data)
-      .length,
-    2,
-  );
+  assert.equal(search({ currency: "USD", min_salary: 110000 }, data).length, 2);
   assert.equal(
     search({ currency: "INR", min_salary: 11000000 }, data).length,
     0,
   );
   assert.equal(to_inr(100000, "USD"), 8500000);
-  assert.ok(
-    filter_error({ ...default_filters(), min_salary: 500, max_salary: 200 }),
+  assert.equal(
+    filters_from_params(new URLSearchParams("maxSalary=200")).max_salary,
+    undefined,
   );
 });
 test("hidden salary amounts never render or participate in client salary matching", () => {
@@ -273,6 +273,6 @@ test("profile validation catches reserved handles, date inversions and missing a
 });
 
 test("free fixture jobs are accessible by direct link but excluded from public discovery", () => {
-  assert.ok(jobs.some(job => job.tier === "Free"));
-  assert.ok(search({}).every(job => job.tier !== "Free"));
+  assert.ok(jobs.some((job) => job.tier === "Free"));
+  assert.ok(search({}).every((job) => job.tier !== "Free"));
 });

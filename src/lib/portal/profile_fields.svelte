@@ -62,7 +62,9 @@
             >Platform<select class="field_input" bind:value={link.platform}
               ><option>LinkedIn</option><option>GitHub</option><option
                 >Behance</option
-              ><option>Dribbble</option><option>Portfolio</option></select
+              ><option>Dribbble</option><option>Portfolio</option><option
+                >Other</option
+              ></select
             ></label
           ><label class="field_label"
             >Link<input
@@ -74,6 +76,18 @@
             /></label
           >
         </div>
+        {#if ["Other", "Portfolio"].includes(link.platform)}<label
+            class="field_label"
+            >Link icon<select class="field_input" bind:value={link.icon}
+              ><option value="globe">Website</option><option value="briefcase"
+                >Work</option
+              ><option value="file">Document</option><option value="spark"
+                >Creative work</option
+              ><option value="code">Code</option><option value="camera"
+                >Photography</option
+              ></select
+            ></label
+          >{/if}
         <button
           type="button"
           class="button button_outline button_small"
@@ -133,7 +147,7 @@
         /></label
       >
       <label class="field_label"
-        >Expected annual salary<input
+        >Minimum expected annual salary<input
           class="field_input"
           type="number"
           min="0"
@@ -144,7 +158,7 @@
         /></label
       >
       <label class="field_label"
-        >Hourly rate · optional<input
+        >Hourly rate for gigs · optional<input
           class="field_input"
           type="number"
           min="0"
@@ -253,7 +267,8 @@
               class="field_input"
               rows="3"
               maxlength="2000"
-              bind:value={experience.description}></textarea></label
+              bind:value={experience.description}
+            ></textarea></label
           >
         </div>
         <button

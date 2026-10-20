@@ -53,6 +53,7 @@ export const recruitment_jobs = writable(
     .filter((job) => job.company === "forma")
     .map((job, i) => ({
       ...job,
+      poster_id: "preview-alex",
       status: i === 1 ? "Closed" : "Active",
       applicants: i === 1 ? 12 : 24,
       views: i === 1 ? 93 : 186,
@@ -244,7 +245,15 @@ export function hydrate_workspace() {
       const value = JSON.parse(
         localStorage.getItem(`referise-workspace-v1:${key}`) || "null",
       );
-      if (Array.isArray(value)) store.set(value);
+      if (Array.isArray(value))
+        store.set(
+          key === "recruitment"
+            ? value.map((item) => ({
+                ...item,
+                poster_id: item.poster_id || "preview-alex",
+              }))
+            : value,
+        );
     } catch {
       /* Use the sample state if browser storage is unavailable. */
     }

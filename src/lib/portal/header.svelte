@@ -3,6 +3,14 @@
   import { onMount as on_mount } from "svelte";
   import Logo from "./logo.svelte";
   import Icon from "./icon.svelte";
+  import Install_button from "./install_button.svelte";
+  import {
+    preview_account,
+    premium_active,
+    applications_remaining,
+    membership_open,
+  } from "./membership_state.js";
+  let signed_in = false;
   let menu_open = false;
   let nav_root;
   const groups = [
@@ -11,6 +19,7 @@
       links: [
         ["My profile", "/profile"],
         ["Applications", "/applications"],
+        ["Membership", "/profile?membership=1"],
       ],
     },
     {
@@ -47,6 +56,11 @@
       .forEach((el) => el.removeAttribute("open"));
   }
   on_mount(() => {
+    const controller = new AbortController();
+    fetch("/auth/session", { cache: "no-store", signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => (signed_in = !!data?.authenticated))
+      .catch(() => {});
     const dismiss = (event) => {
       nav_root.querySelectorAll("details[open]").forEach((el) => {
         if (
@@ -63,6 +77,7 @@
     document.addEventListener("click", dismiss);
     document.addEventListener("keydown", dismiss);
     return () => {
+      controller.abort();
       document.removeEventListener("click", dismiss);
       document.removeEventListener("keydown", dismiss);
     };
@@ -89,7 +104,17 @@
         </details>{/each}
     </nav>
     <div class="unified_actions">
-      <a class="unified_signin" href="/login">Sign in</a><a
+      <Install_button />
+      {#if signed_in || $preview_account.enabled}<button
+          class="header_balance"
+          on:click={() => membership_open.set(true)}
+          aria-label="Preview application allowance and credits"
+          ><strong
+            >{$premium_active
+              ? "Unlimited"
+              : `${$applications_remaining} left today`}</strong
+          ><small>{$preview_account.credits} credits · Preview</small></button
+        >{:else}<a class="unified_signin" href="/login">Sign in</a>{/if}<a
         class="unified_post"
         href="/recruiter/post-job">Post a job <Icon name="plus" size={16} /></a
       >

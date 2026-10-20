@@ -1,4 +1,7 @@
 <script>
+  import Designation_picker from "$lib/portal/designation_picker.svelte";
+  import Location_search from "$lib/portal/location_search.svelte";
+
   import { onMount as on_mount } from "svelte";
   import { goto } from "$app/navigation";
   import Icon from "$lib/portal/icon.svelte";
@@ -25,6 +28,7 @@
   let advanced = default_filters();
   let query = "";
   let location = "";
+  let job_location = "";
   let work_mode = "";
   let search_type = "jobs";
   let company_query = "";
@@ -104,12 +108,18 @@
       );
       return;
     }
-    const remote = location.trim().toLowerCase() === "remote";
+    const remote = advanced.worldwide;
     advanced = {
       ...default_filters(),
       currency: advanced.currency,
+      designations: advanced.designations,
+      locations: advanced.locations,
+      worldwide: advanced.worldwide,
       query: query.trim(),
-      location: remote ? "" : location.trim(),
+      location:
+        advanced.locations.length || advanced.worldwide
+          ? ""
+          : job_location.trim(),
       modes: remote ? ["Remote"] : work_mode ? [work_mode] : [],
     };
     run_search();
@@ -264,25 +274,27 @@
             <span class="search_note">One search. A whole new chapter.</span>
           </div>
           <div class="search_input_row">
-            <label
-              ><Icon name="search" size={20} /><span class="sr_only"
-                >{search_type === "jobs"
-                  ? "Job title, skill, or company"
-                  : "Company name or industry"}</span
-              ><input
-                bind:value={query}
-                placeholder={search_type === "jobs"
-                  ? "Job title, skill, or company"
-                  : "Company name or industry"}
-              /></label
-            ><label
-              ><Icon name="location" size={19} /><span class="sr_only"
-                >City, country, or remote</span
-              ><input
-                bind:value={location}
-                placeholder="City, country, or remote"
-              /></label
-            ><button class="r_button blue" type="submit"
+            {#if search_type === "jobs"}<Designation_picker
+                bind:query
+                bind:selected={advanced.designations}
+              /><Location_search
+                bind:selected={advanced.locations}
+                bind:query={job_location}
+                bind:worldwide={advanced.worldwide}
+              />{:else}<label
+                ><Icon name="search" size={20} /><input
+                  aria-label="Company name or industry"
+                  bind:value={query}
+                  placeholder="Company name or industry"
+                /></label
+              ><label
+                ><Icon name="location" size={19} /><input
+                  aria-label="Company location"
+                  bind:value={location}
+                  placeholder="Company location"
+                /></label
+              >{/if}
+            <button class="r_button blue" type="submit"
               >{search_type === "jobs"
                 ? "Find my next role"
                 : "Explore companies"}<Icon
@@ -321,18 +333,40 @@
         </div>
       </div>
     </section>
-    <div class="company_strip landing_container">
-      <span
-        >GET TO KNOW THE TEAMS<br /><strong>IN OUR DESIGN PREVIEW</strong></span
-      >
-      <div>
-        {#each companies as company}<button
-            on:click={() => goto(`/company/${company.id}`)}
-            ><Company_logo id={company.id} size={26} />{company.name}</button
-          >{/each}
+    <section class="reach_section" id="global-reach">
+      <div class="landing_container reach_layout">
+        <div class="reach_intro">
+          <span class="section_kicker">04 / A BIGGER WORLD OF WORK</span>
+          <h2>Good people.<br />Everywhere.</h2>
+          <p>
+            Talent doesn’t have a postcode.<br />Neither should opportunity.
+          </p>
+          <span class="metrics_note"
+            >Illustrative platform figures<br />Planned daily updates</span
+          ><svg
+            class="reach_globe"
+            width="130"
+            height="130"
+            viewBox="0 0 130 130"
+            aria-hidden="true"
+            ><circle cx="65" cy="65" r="60" /><ellipse
+              cx="65"
+              cy="65"
+              rx="28"
+              ry="60"
+            /><path d="M5 65h120M15 34h100M15 96h100M65 5v120" /></svg
+          >
+        </div>
+        <div class="reach_grid">
+          {#each platform_metrics as metric}<article>
+              <strong>{metric.value}</strong>
+              <h3>{metric.label}</h3>
+              <p>{metric.detail}</p>
+              <span>{metric.note}</span>
+            </article>{/each}
+        </div>
       </div>
-    </div>
-
+    </section>
     <section class="opportunities_section landing_container" id="opportunities">
       <div class="landing_section_heading">
         <div>
@@ -615,44 +649,10 @@
       </div>
       <p class="section_disclosure">
         A preview of the platform vision. Verification, live exchange rates, and
-        app installation are planned integrations.
+        app link handling depend on connected services and browser support.
       </p>
     </section>
 
-    <section class="reach_section" id="global-reach">
-      <div class="landing_container reach_layout">
-        <div class="reach_intro">
-          <span class="section_kicker">04 / A BIGGER WORLD OF WORK</span>
-          <h2>Good people.<br />Everywhere.</h2>
-          <p>
-            Talent doesn’t have a postcode.<br />Neither should opportunity.
-          </p>
-          <span class="metrics_note"
-            >Illustrative platform figures<br />Planned daily updates</span
-          ><svg
-            class="reach_globe"
-            width="130"
-            height="130"
-            viewBox="0 0 130 130"
-            aria-hidden="true"
-            ><circle cx="65" cy="65" r="60" /><ellipse
-              cx="65"
-              cy="65"
-              rx="28"
-              ry="60"
-            /><path d="M5 65h120M15 34h100M15 96h100M65 5v120" /></svg
-          >
-        </div>
-        <div class="reach_grid">
-          {#each platform_metrics as metric}<article>
-              <strong>{metric.value}</strong>
-              <h3>{metric.label}</h3>
-              <p>{metric.detail}</p>
-              <span>{metric.note}</span>
-            </article>{/each}
-        </div>
-      </div>
-    </section>
     <section class="refresh_faq landing_container reveal" id="faq">
       <div class="faq_intro">
         <span class="section_kicker">05 / A LITTLE CLARITY</span>

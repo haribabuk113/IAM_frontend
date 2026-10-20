@@ -16,23 +16,12 @@
   <div class="auth_help_list">
     <details class="auth_help_detail" open>
       <summary>Forgot your password?</summary>
-      <p>
-        Password reset isn’t available in this version yet. Contact your account
-        administrator for help recovering your email/password account.
-      </p>
+      <p>Referise uses provider sign-in. There is no separate Referise password to reset.</p>
       <p>
         If you originally joined with Google, LinkedIn or another provider, use
         that same provider to sign in. Reset its password through that provider
         if needed.
       </p>
-    </details>
-    <details class="auth_help_detail">
-      <summary>Waiting for a confirmation email?</summary>
-      <p>
-        Check your spam or junk folder and confirm that you entered the correct
-        address. After following the confirmation link, return here to sign in.
-      </p>
-      <a href="/auth/check-email">View confirmation steps ↗</a>
     </details>
     <details class="auth_help_detail">
       <summary>Your sign-in provider isn’t working?</summary>

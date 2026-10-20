@@ -7,6 +7,7 @@ export const search_filters = writable(default_filters());
 export const viewing_currency = writable("INR");
 export const saved_jobs = writable([]);
 export const applications = writable([]);
+export const application_snapshots = writable([]);
 export const saved_searches = writable([]);
 export const profile = writable(structuredClone(default_profile));
 export const resume_file = writable(null);

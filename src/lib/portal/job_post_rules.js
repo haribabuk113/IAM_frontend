@@ -8,6 +8,7 @@ export const new_job_form = () => ({
   skills: [],
   min_experience: 0,
   locations: [],
+  worldwide: false,
   salary_max: "",
   currency: "INR",
   salary_hidden: false,
@@ -24,8 +25,14 @@ export function job_form_error(form) {
   if (!form.title.trim()) return "Add a job title.";
   if (!form.skills.length || form.skills.length > 15)
     return "Choose between 1 and 15 skills.";
-  if (!form.locations.length)
-    return "Select at least one eligible location, including for remote roles.";
+  if (!form.locations.length && !form.worldwide)
+    return "Select an eligible location or worldwide remote.";
+  if (
+    form.worldwide &&
+    (!form.modes.includes("Remote") ||
+      form.modes.some((mode) => mode !== "Remote"))
+  )
+    return "Worldwide remote requires a remote-only workplace.";
   if (
     !Number.isInteger(Number(form.min_experience)) ||
     form.min_experience < 0 ||
@@ -64,6 +71,7 @@ export function job_form_error(form) {
 export function normalise_job_post(form) {
   return {
     ...form,
+    location_type: form.worldwide ? "world_remote" : "specific",
     company: form.tier === "Free" ? "" : form.company,
     salary_hidden: form.tier === "Free" ? false : form.salary_hidden,
     application: form.tier === "Free" ? "Easy apply" : form.application,

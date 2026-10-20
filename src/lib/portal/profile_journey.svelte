@@ -1,0 +1,53 @@
+<script>
+  export let profile;
+  export let public_preview = false;
+  $: experience = profile.experiences
+    .map((item, index) => ({ ...item, index }))
+    .sort((a, b) => a.start.localeCompare(b.start));
+  $: steps = journey_steps(experience, profile.education);
+  function journey_steps(items, education) {
+    const result = education
+      .filter((e) => e.end)
+      .map((e) => ({
+        label: e.end,
+        title: e.degree,
+        detail: e.institution || "Graduation",
+        href: "#profile-background",
+      }));
+    items.forEach((item, i) => {
+      const previous = items[i - 1];
+      if (previous?.end && item.start) {
+        const gap =
+          (new Date(item.start + "-01") - new Date(previous.end + "-01")) /
+          86400000;
+        if (gap > 62)
+          result.push({
+            label: "A pause",
+            title: "Between chapters",
+            detail: `${previous.end} – ${item.start}`,
+            href: `#experience-${item.index}`,
+          });
+      }
+      result.push({
+        label: item.start?.slice(0, 4) || "Next",
+        title: item.company,
+        detail: item.title,
+        href: `#experience-${item.index}`,
+      });
+    });
+    return result;
+  }
+</script>
+
+<div class="career_path" aria-label="Career journey">
+  <span class="career_path_label">EVERY CHAPTER COUNTS</span>
+  <div class="career_path_steps">
+    {#each steps as step, i}<a href={`/profile${public_preview ? "?public=1" : ""}${step.href}`} style={`--step:${i}`}
+        ><span class="journey_dot">{i === 0 ? "✳" : "•"}</span><span
+          >{step.label}</span
+        ><span class="journey_tip"
+          ><strong>{step.title}</strong><small>{step.detail}</small></span
+        ></a
+      >{/each}
+  </div>
+</div>

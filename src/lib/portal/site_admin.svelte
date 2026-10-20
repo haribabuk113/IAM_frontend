@@ -1,4 +1,5 @@
 <script>
+  import Premium_settings from "./premium_settings.svelte";
   import { keep_active_visible } from "$lib/portal/keep_active_visible.js";
   import { taxonomy_entries } from "./workspace_state.js";
   import { toast } from "./state.js";
@@ -71,12 +72,13 @@
     use:keep_active_visible={tab}
     aria-label="Platform administration"
   >
-    {#each [["taxonomy", "Skills & designations"], ["reports", "Moderation"], ["currency", "Exchange rates"], ["identity", "Identity & access"]] as [key, label]}<button
+    {#each [["membership", "Membership & filters"], ["taxonomy", "Skills & designations"], ["reports", "Moderation"], ["currency", "Exchange rates"], ["identity", "Identity & access"]] as [key, label]}<button
         class:active={tab === key}
         on:click={() => (tab = key)}>{label}</button
       >{/each}
   </nav>
-  {#if tab === "taxonomy"}<div class="stat_grid">
+  {#if tab === "membership"}<Premium_settings
+    />{:else if tab === "taxonomy"}<div class="stat_grid">
       <div class="stat_card featured">
         <span>Pending terms</span><strong
           >{$taxonomy_entries.filter((t) => t.status === "Pending")

@@ -1,23 +1,28 @@
 <script>
-  import Location_picker from "./location_picker.svelte";
+  import {
+    membership_settings,
+    premium_active,
+    membership_open,
+  } from "./membership_state.js";
   import { notice_periods } from "./filter_options.js";
-  import { filter_error } from "./search.js";
   export let filters;
   export let scope = "search";
+  $: locked = (key) =>
+    !$premium_active && $membership_settings.premium_filters.includes(key);
   function toggle(key, value) {
     filters = {
       ...filters,
       [key]: filters[key].includes(value)
-        ? filters[key].filter((item) => item !== value)
+        ? filters[key].filter((v) => v !== value)
         : [...filters[key], value],
     };
   }
 </script>
 
-<div class="filter_panel compact_filters" data-scope={scope}>
+<div class="filter_panel compact_filters refined_filters" data-scope={scope}>
   {#each [{ key: "modes", title: "Workplace", options: ["Remote", "Hybrid", "On-site"] }, { key: "types", title: "Job type", options: ["Full-time", "Part-time", "Contract", "Gig", "Volunteering", "Advisory", "Others"] }] as group}
-    <fieldset>
-      <legend>{group.title}</legend>
+    <fieldset disabled={locked(group.key)}>
+      <legend>{group.title}{locked(group.key) ? " · Premium" : ""}</legend>
       <div class="filter_chips">
         {#each group.options as option}<label
             class:chosen={filters[group.key].includes(option)}
@@ -28,122 +33,117 @@
             />{option}</label
           >{/each}
       </div>
-    </fieldset>
-  {/each}
+    </fieldset>{/each}
   <div class="filter_pair">
     <label class="field_label"
-      >Experience (years)<input
+      >Experience (years){locked("min_experience") ? " · Premium" : ""}<input
         class="field_input"
         type="number"
         min="0"
         max="99"
         step="1"
+        disabled={locked("min_experience")}
         bind:value={filters.min_experience}
-        placeholder="Minimum"
       /></label
     ><label class="field_label"
-      >Posted within<select
+      >Posted within{locked("posted_within") ? " · Premium" : ""}<select
         class="field_input"
+        disabled={locked("posted_within")}
         bind:value={filters.posted_within}
-        >{#each [1, 3, 9, 15, 30] as days}<option value={days}
+        >{#each [1, 3, 7, 9, 15, 30] as days}<option value={days}
             >{days === 1 ? "24 hours" : `${days} days`}</option
           >{/each}</select
       ></label
     >
   </div>
-  <details class="filter_disclosure secondary_filters">
-    <summary>More filters</summary>
-    <label class="filter_checkbox"
-      ><input type="checkbox" bind:checked={filters.worldwide} />Worldwide
-      remote</label
+  <fieldset disabled={locked("min_salary")}>
+    <legend
+      >Minimum annual salary{locked("min_salary") ? " · Premium" : ""}</legend
     >
-    <details class="filter_disclosure">
-      <summary>Choose locations</summary><Location_picker
-        bind:selected={filters.locations}
-      />
-    </details>
-    <fieldset>
-      <legend>Annual salary</legend><label class="field_label"
-        >Currency<select
+    <div class="salary_filter_row">
+      <label class="field_label"
+        ><span class="sr_only">Preferred currency</span><select
           class="field_input"
           bind:value={filters.currency}
-          on:change={() => {
-            filters.min_salary = 0;
-            filters.max_salary = 0;
-          }}
+          on:change={() => (filters.min_salary = 0)}
           ><option>INR</option><option>USD</option><option>EUR</option><option
             >GBP</option
           ></select
         ></label
+      ><label class="field_label"
+        ><span class="sr_only">Minimum annual salary</span><input
+          class="field_input"
+          type="number"
+          min="0"
+          placeholder="Minimum"
+          bind:value={filters.min_salary}
+        /></label
       >
-      <div class="filter_pair">
-        <label class="field_label"
-          >From<input
-            class="field_input"
-            type="number"
-            min="0"
-            bind:value={filters.min_salary}
-          /></label
-        ><label class="field_label"
-          >To<input
-            class="field_input"
-            type="number"
-            min="0"
-            bind:value={filters.max_salary}
-          /></label
-        >
-      </div>
-      <small>0 leaves the limit open. Preview exchange rates.</small>
-    </fieldset>
-    <details class="filter_disclosure">
-      <summary>Notice & relocation</summary>
-      <fieldset>
-        <legend>Notice period</legend>{#each notice_periods as option}<label
-            class="filter_checkbox"
-            ><input
-              type="checkbox"
-              checked={filters.notice.includes(option)}
-              on:change={() => toggle("notice", option)}
-            />{option}</label
-          >{/each}
-      </fieldset>
-      <fieldset>
-        <legend>Relocation</legend
-        >{#each ["On their own", "Supported locally", "Supported internationally"] as option}<label
-            class="filter_checkbox"
-            ><input
-              type="checkbox"
-              checked={filters.relocation.includes(option)}
-              on:change={() => toggle("relocation", option)}
-            />{option}</label
-          >{/each}
-      </fieldset>
-    </details>
+    </div>
+    <small>0 means any salary. Illustrative exchange rates.</small>
+  </fieldset>
+  <fieldset disabled={locked("min_match")}>
+    <legend>Minimum skill match{locked("min_match") ? " · Premium" : ""}</legend
+    ><select
+      class="field_input"
+      aria-label="Minimum skill match"
+      bind:value={filters.min_match}
+      ><option value={0}>Any match</option
+      >{#each [100, 90, 80, 70, 60, 50] as score}<option value={score}
+          >{score}% or more</option
+        >{/each}</select
+    ><small>Based on the skills in your preview profile.</small>
+  </fieldset>
+  {#if !$premium_active && $membership_settings.premium_filters.length}<button
+      type="button"
+      class="premium_filter_link"
+      on:click={() => membership_open.set(true)}>Explore premium options</button
+    >{/if}
+  <details class="filter_disclosure">
+    <summary>More filters</summary>
+    {#each [{ key: "notice", title: "Notice period", options: notice_periods }, { key: "relocation", title: "Relocation", options: ["On their own", "Supported locally", "Supported internationally"] }] as group}<fieldset
+        disabled={locked(group.key)}
+      >
+        <legend>{group.title}{locked(group.key) ? " · Premium" : ""}</legend>
+        <div class="filter_chips">
+          {#each group.options as option}<label
+              ><input
+                type="checkbox"
+                checked={filters[group.key].includes(option)}
+                on:change={() => toggle(group.key, option)}
+              />{option}</label
+            >{/each}
+        </div>
+      </fieldset>{/each}
     <label class="field_label"
-      >Maximum interview rounds<input
+      >Maximum interview rounds{locked("rounds") ? " · Premium" : ""}<input
         class="field_input"
         type="number"
         min="0"
         max="20"
         step="1"
         placeholder="Any"
+        disabled={locked("rounds")}
         bind:value={filters.rounds}
       /></label
     >
     <label class="field_label"
-      >Listing category<select
+      >Listing category{locked("tiers") || locked("methods")
+        ? " · Premium"
+        : ""}<select
         class="field_input"
+        disabled={locked("tiers") || locked("methods")}
         value={filters.methods.includes("External")
           ? "External"
           : filters.tiers.includes("Premium")
             ? "Premium"
             : ""}
         on:change={(e) => {
-          const value = e.currentTarget.value;
+          const v = e.currentTarget.value;
           filters = {
             ...filters,
-            tiers: value === "Premium" ? ["Premium"] : [],
-            methods: value === "External" ? ["External"] : [],
+            tiers: v === "Premium" ? ["Premium"] : [],
+            methods: v === "External" ? ["External"] : [],
           };
         }}
         ><option value="">All searchable listings</option><option
@@ -152,7 +152,4 @@
       ><small>Free listings are shared by direct link.</small></label
     >
   </details>
-  {#if filter_error(filters)}<p class="filter_error" role="alert">
-      {filter_error(filters)}
-    </p>{/if}
 </div>
