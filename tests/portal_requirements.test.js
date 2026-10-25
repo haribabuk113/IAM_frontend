@@ -43,7 +43,7 @@ test("every new filter survives a shareable URL round trip", () => {
     industries: ["Developer tools"],
     sizes: ["51–200 people"],
     benefits: ["Paid leave"],
-    designations: [jobs[0].id],
+    designations: [jobs[0].title],
     skills: ["Figma"],
     locations: ["1277333"],
     easy: true,

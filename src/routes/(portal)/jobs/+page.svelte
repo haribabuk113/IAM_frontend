@@ -38,7 +38,7 @@
     viewing_currency,
     toast,
   } from "$lib/portal/state";
-  import { location_label, rates, skills as skill_terms } from "$lib/portal/reference.js";
+  import { location_label, rates, skills as skill_terms, designations as designation_terms } from "$lib/portal/reference.js";
   after_navigate(() => {
     const current = filters_from_params($page.url.searchParams);
     search_filters.set(current);
@@ -67,11 +67,12 @@
   let search_error = "";
   let search_seq = 0;
   $: skill_ids = Object.fromEntries($skill_terms.map((t) => [t.name, t.id]));
-  $: if (browser) run_search(effective_filters, current_page, $rates, skill_ids, effective_filters.saved ? $saved_jobs : []);
-  async function run_search(f, page, rates, ids, saved) {
+  $: designation_ids = Object.fromEntries($designation_terms.map((t) => [t.name, t.id]));
+  $: if (browser) run_search(effective_filters, current_page, $rates, skill_ids, designation_ids, effective_filters.saved ? $saved_jobs : []);
+  async function run_search(f, page, rates, ids, designation_ids, saved) {
     const seq = ++search_seq;
     searching = true;
-    const result = await jobs_api.search(to_criteria(f, { rates, skill_ids: ids, saved, page, page_size }));
+    const result = await jobs_api.search(to_criteria(f, { rates, skill_ids: ids, designation_ids, saved, page, page_size }));
     if (seq !== search_seq) return; // a newer search started meanwhile
     searching = false;
     search_error = result.ok ? "" : result.error;

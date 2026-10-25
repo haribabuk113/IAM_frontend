@@ -1,5 +1,5 @@
 import { skill_match } from "./membership_rules.js";
-import { get_company, jobs as sample_jobs, companies } from "./data.js";
+import { get_company, companies } from "./data.js";
 import {
   work_types,
   notice_periods,
@@ -57,7 +57,8 @@ export const filter_groups = [
   {
     title: "Designation",
     key: "designations",
-    options: sample_jobs.map((job) => job.id),
+    // Any designation name from the shared taxonomy (sent to the API as term ids).
+    valid: (value) => value.trim().length > 0 && value.length <= 80,
   },
   {
     title: "Skills",
@@ -274,7 +275,7 @@ export function filter_jobs(
       industries: [company.sector],
       sizes: [company.size],
       benefits: job.benefits ?? [],
-      designations: [job.designation_id ?? job.id],
+      designations: [job.title],
       skills: job.skills,
     })) {
       if (
@@ -370,9 +371,7 @@ export function active_filter_labels(filters) {
       label:
         group.key === "locations"
           ? get(location_label)(value)
-          : group.key === "designations"
-            ? (sample_jobs.find((job) => job.id === value)?.title ?? value)
-            : value,
+          : value,
     })),
   );
   for (const [key, label] of [

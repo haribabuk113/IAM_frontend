@@ -2,6 +2,7 @@
   import Skill_line from "./skill_line.svelte";
   let all_open = false;
   import { profile, toast } from "./state.js";
+  import { profile_api, to_store } from "./profile_api.js";
   import Modal from "./modal.svelte";
   import { skills as skill_terms } from "./reference.js";
   export let readonly = false;
@@ -19,16 +20,17 @@
     editing = true;
     target_group = 0;
   }
-  function save() {
+  async function save() {
     if (groups.some((g) => !g.name.trim())) {
       toast("Give each skill group a name.");
       return;
     }
-    profile.update((p) => ({
-      ...p,
-      skill_groups: groups,
-      skills: [...new Set(groups.flatMap((g) => g.skills))],
-    }));
+    const result = await profile_api.save({ ...$profile, skill_groups: groups });
+    if (!result.ok) {
+      toast(result.error);
+      return;
+    }
+    profile.set(to_store(result.data));
     editing = false;
     toast("Skill groups saved.");
   }

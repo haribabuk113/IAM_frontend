@@ -70,12 +70,13 @@ export function to_card(job, label = (id) => id) {
  * "Filters": one request when the user presses Search). Salaries convert to
  * the INR baseline with the published rates; skill names map to term ids.
  */
-export function to_criteria(filters, { rates, skill_ids = {}, saved = [], page = 1, page_size = 20 }) {
+export function to_criteria(filters, { rates, skill_ids = {}, designation_ids = {}, saved = [], page = 1, page_size = 20 }) {
   const number = (v) => (v === "" || v == null ? null : Number(v));
   return {
     query: filters.query,
     location_text: filters.location,
     skills: filters.skills.map((name) => skill_ids[name]).filter(Boolean),
+    designations: filters.designations.map((name) => designation_ids[name]).filter(Boolean),
     location_ids: filters.locations,
     worldwide_remote: filters.worldwide,
     min_salary_inr: to_inr(filters.min_salary || 0, filters.currency, rates),
@@ -84,6 +85,7 @@ export function to_criteria(filters, { rates, skill_ids = {}, saved = [], page =
     relocation: filters.relocation,
     work_modes: filters.modes,
     work_types: filters.types,
+    tiers: filters.tiers,
     categories: filters.categories,
     levels: filters.levels,
     industries: filters.industries,
