@@ -12,7 +12,7 @@
     preview_account,
   } from "$lib/portal/membership_state.js";
   import { viewing_currency } from "$lib/portal/state.js";
-  import { preview_rates, to_inr } from "$lib/portal/currency.js";
+  import { to_inr } from "$lib/portal/currency.js";
   let analytics_tab = "profile";
   let membership_query_seen = false;
   $: if (
@@ -34,8 +34,8 @@
       currency: $viewing_currency,
       maximumFractionDigits: 0,
     }).format(
-      to_inr(amount || 0, $profile.salary_currency) /
-        preview_rates[$viewing_currency],
+      to_inr(amount || 0, $profile.salary_currency, $rates) /
+        ($rates[$viewing_currency] ?? 1),
     );
   async function copy_resume() {
     if ($profile.resume_private) {
@@ -76,7 +76,8 @@
     company_records,
   } from "$lib/portal/workspace_state.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
-  import { notice_periods, location_name } from "$lib/portal/filter_options.js";
+  import { notice_periods } from "$lib/portal/filter_options.js";
+  import { location_label, rates } from "$lib/portal/reference.js";
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
   import Company_logo from "$lib/portal/company_logo.svelte";
@@ -971,7 +972,7 @@
             <div>
               <dt>PREFERRED LOCATIONS</dt>
               <dd>
-                {$profile.preferred_locations.map(location_name).join(", ") ||
+                {$profile.preferred_locations.map($location_label).join(", ") ||
                   "No preference"}{$profile.open_to_remote
                   ? " · Worldwide remote"
                   : ""}

@@ -3,14 +3,14 @@
   let all_open = false;
   import { profile, toast } from "./state.js";
   import Modal from "./modal.svelte";
-  import { jobs } from "./data.js";
+  import { skills as skill_terms } from "./reference.js";
   export let readonly = false;
   let editing = false;
   let groups = [];
   let dragged = null;
   let new_skill = "";
   let target_group = 0;
-  const suggestions = [...new Set(jobs.flatMap((j) => j.skills))];
+  $: suggestions = $skill_terms.map((term) => term.name);
   $: displayed = $profile.skill_groups?.length
     ? $profile.skill_groups
     : [{ name: "Core skills", skills: $profile.skills }];
