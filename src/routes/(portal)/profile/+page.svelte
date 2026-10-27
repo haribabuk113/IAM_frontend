@@ -74,16 +74,9 @@
   import { location_label, rates } from "$lib/portal/reference.js";
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
-  import Company_logo from "$lib/portal/company_logo.svelte";
   import Modal from "$lib/portal/modal.svelte";
-  import {
-    profile,
-    applications,
-    saved_jobs,
-    resume_file,
-    toast,
-  } from "$lib/portal/state";
-  import { jobs, get_company } from "$lib/portal/data";
+  import { profile, resume_file, toast } from "$lib/portal/state";
+  import { default_profile } from "$lib/portal/data";
   export let data;
   // The server's copy is the truth; the store feeds the profile components.
   $: profile.set(to_store(data.profile));
@@ -107,6 +100,9 @@
   let share_url = "";
   $: if ($resume_file && !resume_url)
     resume_url = URL.createObjectURL($resume_file);
+  // The profile store also backs signed-out match previews: don't leave a
+  // visited profile in it.
+  on_destroy(() => data.visitor && profile.set(structuredClone(default_profile)));
   on_destroy(() => {
     if (resume_url) URL.revokeObjectURL(resume_url);
   });
@@ -147,7 +143,9 @@
       text: "Hide the résumé from visitors to your public profile.",
     },
   ];
-  $: current_tab = ["overview", "activity", "preferences", "jobs"].includes(
+  $: current_tab = data.visitor
+    ? "overview"
+    : ["overview", "activity", "preferences", "jobs"].includes(
     $page.url.searchParams.get("tab") ?? "",
   )
     ? $page.url.searchParams.get("public") === "1" &&
@@ -160,14 +158,24 @@
     .map((part) => part[0])
     .slice(0, 2)
     .join("");
-  $: applied_jobs = jobs.filter((job) => $applications.includes(job.id));
+  $: applied_jobs = data.applications ?? [];
   $: completeness = [
     $profile.name,
     $profile.title,
     $profile.about,
     $profile.skills.length,
   ].filter(Boolean).length;
-  $: public_preview = $page.url.searchParams.get("public") === "1";
+  // Visitors (/profiles/[slug]) get the read-only view the owner previews
+  // with ?public=1, minus the owner-only sample insights and résumé preview.
+  $: visitor = !!data.visitor;
+  $: public_preview = visitor || $page.url.searchParams.get("public") === "1";
+  $: tab_href = (tab) => {
+    const query = new URLSearchParams({
+      ...(public_preview && !visitor && { public: "1" }),
+      ...(tab !== "overview" && { tab }),
+    });
+    return (visitor ? `/profiles/${$profile.slug}` : "/profile") + (query.size ? "?" + query : "");
+  };
   function edit(section) {
     draft = structuredClone($profile);
     skill_text = draft.skills.join(", ");
@@ -233,10 +241,12 @@
     toast("Verification requested. The company will review it.");
   }
   async function share() {
-    share_url = `${window.location.origin}/profile?public=1`;
+    if (!$profile.saved) return toast("Save your profile first, then share it.");
+    if (!$profile.visible) return toast("Your profile is private. Make it public in Preferences to share it.");
+    share_url = `${window.location.origin}/profiles/${$profile.slug}`;
     try {
       await navigator.clipboard.writeText(share_url);
-      toast("Preview link copied.");
+      toast("Profile link copied.");
     } catch {
       sharing = true;
     }
@@ -290,13 +300,13 @@
 </script>
 
 <svelte:head
-  ><title>{$profile.name} — Your profile — Referise</title><meta
+  ><title>{$profile.name} — {visitor ? "Profile" : "Your profile"} — Referise</title><meta
     name="description"
     content="Make your experience, skills, and next chapter your own. Manage your Referise profile and privacy preferences."
-  /><meta name="robots" content="noindex" /></svelte:head
+  />{#if !visitor}<meta name="robots" content="noindex" />{/if}</svelte:head
 >
 <main id="main-content" class="profile_page portal_container">
-  <div class="profile_page_intro">
+  {#if !visitor}<div class="profile_page_intro">
     <div>
       <span class="eyebrow_label"
         >{public_preview
@@ -324,8 +334,8 @@
         size={15}
       />{public_preview ? "Back to editing" : "Preview public profile"}</button
     >
-  </div>
-  {#if public_preview}<div class="public_preview_notice">
+  </div>{/if}
+  {#if public_preview && !visitor}<div class="public_preview_notice">
       <Icon name="eye" size={17} /><span
         >{$profile.visible
           ? "Public preview. Private salary, contact details, and restricted résumé access are hidden."
@@ -357,11 +367,9 @@
         <div class="profile_identity_main">
           <div class="profile_name_row">
             <h2>{$profile.name}</h2>
-            <a
+            {#if !visitor}<a
               class="profile_mini_analytics"
-              href={public_preview
-                ? "/profile?public=1&tab=activity"
-                : "/profile?tab=activity"}
+              href={tab_href("activity")}
               ><strong>62 <span>views this week</span></strong><svg
                 viewBox="0 0 80 24"
                 aria-hidden="true"
@@ -372,7 +380,7 @@
                   stroke-width="2"
                 /></svg
               ><small>Sample insights</small></a
-            >
+            >{/if}
           </div>
           <p class="profile_title">
             {$profile.title}{#if $profile.pronouns}<small>
@@ -404,12 +412,12 @@
           >{#if $profile.phone}<a href={`tel:${$profile.phone}`}
               >{$profile.phone}</a
             >{/if}{/if}
-        {#if !public_preview || !$profile.resume_private}<button
+        {#if !visitor && (!public_preview || !$profile.resume_private)}<button
             class="text_link"
             on:click={() => (resume_open = true)}>View résumé ↗</button
           >{/if}
         <button class="text_link" on:click={share}>Copy profile link</button>
-        {#if !public_preview || !$profile.resume_private}<button
+        {#if !visitor && (!public_preview || !$profile.resume_private)}<button
             class="text_link"
             on:click={copy_resume}>Copy résumé link</button
           >{/if}
@@ -419,29 +427,16 @@
           >{/if}
       </div>
       {#if !public_preview}<p class="profile_link_note">
-          Links share the design preview. Uploaded résumés still need file
-          hosting.
+          Your profile link opens your public profile. Résumé files aren’t stored yet.
         </p>{/if}
       <div class="profile_navigation">
         <nav aria-label="Profile sections">
-          <a
-            href={public_preview ? "/profile?public=1" : "/profile"}
-            class:active={current_tab === "overview"}>Overview</a
-          >
-          <a
-            href={public_preview
-              ? "/profile?public=1&tab=activity"
-              : "/profile?tab=activity"}
-            class:active={current_tab === "activity"}
-            >Activity & insights <span class="tab_dot"></span></a
-          >
-          <a
-            href={public_preview
-              ? "/profile?public=1&tab=jobs"
-              : "/profile?tab=jobs"}
-            class:active={current_tab === "jobs"}
-            >{public_preview ? "Jobs posted" : "Jobs posted by me"}</a
-          >{#if !public_preview}<a
+          <a href={tab_href("overview")} class:active={current_tab === "overview"}>Overview</a
+          >{#if !visitor}<a href={tab_href("activity")} class:active={current_tab === "activity"}
+              >Activity & insights <span class="tab_dot"></span></a
+            ><a href={tab_href("jobs")} class:active={current_tab === "jobs"}
+              >{public_preview ? "Jobs posted" : "Jobs posted by me"}</a
+            >{/if}{#if !public_preview}<a
               href="/profile?tab=preferences"
               class:active={current_tab === "preferences"}>Preferences</a
             >{/if}
@@ -645,22 +640,24 @@
                 <div class="profile_section_heading">
                   <h2>The doors you’ve opened</h2>
                   <span class="section_label"
-                    >{$applications.length} PREVIEW APPLICATIONS</span
+                    >{applied_jobs.length} {applied_jobs.length === 1 ? "APPLICATION" : "APPLICATIONS"}</span
                   >
                 </div>
                 {#if applied_jobs.length}<div class="application_list">
-                    {#each applied_jobs as job}<a href={`/jobs/${job.id}`}
-                        ><Company_logo id={job.company} size={40} />
-                        <div>
-                          <h3>{job.title}</h3>
+                    {#each applied_jobs.slice(0, 5) as a (a.id)}<a href={`/jobs/${a.job_id}`}
+                        ><div>
+                          <h3>{a.job_title}</h3>
                           <p>
-                            {get_company(job.company).name} · {job.location}
+                            {a.company_name || "Confidential"} · Applied {new Date(a.submitted_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
                           </p>
                         </div>
                         <span
-                          ><Icon name="check" size={12} />Saved in preview</span
+                          ><Icon name="check" size={12} />{a.apply_type === "external"
+                            ? "On employer’s site"
+                            : { new: "Submitted", shortlisted: "Shortlisted", contacted: "Contacted", rejected: "Not moving forward" }[a.stage]}</span
                         ><Icon name="arrow-up-right" size={17} /></a
                       >{/each}
+                    {#if applied_jobs.length > 5}<a class="text_link" href="/applications">All your applications ↗</a>{/if}
                   </div>{:else}<div class="activity_empty">
                     <Icon name="briefcase" size={29} />
                     <h3>Your next move is out there.</h3>
@@ -734,9 +731,8 @@
               </div>{/each}
             <div class="inline_notice preferences_notice">
               <Icon name="info" size={16} /><span
-                >These controls demonstrate the intended privacy experience.
-                This preview stores changes in your browser; a shared link shows
-                the sample profile on another device.</span
+                >These settings are saved to your profile and apply to
+                everyone who opens your public profile link.</span
               >
             </div>
           </section>
@@ -836,7 +832,7 @@
               ><option>INR</option><option>USD</option><option>EUR</option
               ><option>GBP</option></select
             ></label
-          ><small class="small_text">Illustrative exchange rates.</small>
+          ><small class="small_text">Converted at today’s published rates.</small>
           <dl class="career_preferences">
             <div>
               <dt><Icon name="briefcase" size={14} />LOOKING FOR</dt>
@@ -897,7 +893,7 @@
               </div>{/if}
           </dl>
         </section>
-        {#if !public_preview || !$profile.resume_private}<section
+        {#if !visitor && (!public_preview || !$profile.resume_private)}<section
             class="profile_side_card resume_card"
           >
             <div class="side_card_heading">
@@ -1135,11 +1131,11 @@
     title="Share your next chapter."
     on:close={() => (sharing = false)}
     ><p class="modal_description">
-      Copy this preview link. Profile edits are local to your browser; other
-      devices will see the sample profile.
+      Anyone with this link can see your public profile. Private salary,
+      contact details and résumé settings still apply.
     </p>
     <label class="field_label"
-      >Profile preview link<input
+      >Profile link<input
         class="field_input"
         readonly
         value={share_url}

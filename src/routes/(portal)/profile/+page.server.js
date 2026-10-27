@@ -9,11 +9,16 @@ export async function load({ cookies }) {
   const session_id = read_session_id(cookies);
   const to_login = "/login?next=%2Fprofile";
   if (!session_id) redirect(303, to_login);
-  const [result, posted] = await Promise.all([
+  const [result, posted, applications] = await Promise.all([
     api_request("/profile/me", { session_id }),
     api_request("/recruiter/jobs?status=active", { session_id }),
+    api_request("/applications", { session_id }),
   ]);
   if (result.status === 401) redirect(303, to_login);
   if (!result.ok) error(502, "Your profile is unavailable right now.");
-  return { profile: result.data, posted_jobs: posted.ok ? posted.data : [] };
+  return {
+    profile: result.data,
+    posted_jobs: posted.ok ? posted.data : [],
+    applications: applications.ok ? applications.data : [],
+  };
 }

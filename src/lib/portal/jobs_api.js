@@ -45,6 +45,12 @@ export const jobs_api = {
     call(`/framework_api/recruiter/jobs/${enc(job_id)}/applications?` +
       new URLSearchParams({ ...(stage && { stage }), ...(min_match && { min_match: String(min_match) }), sort })),
   set_stage: (id, stage) => call(`/framework_api/recruiter/applications/${enc(id)}`, { method: "PATCH", body: { stage } }),
+  // Saved jobs (signed in): each change answers with the whole list, newest first.
+  saved_jobs: () => call("/framework_api/saved-jobs"),
+  save_job: (id) => call(`/framework_api/saved-jobs/${enc(id)}`, { method: "PUT" }),
+  unsave_job: (id) => call(`/framework_api/saved-jobs/${enc(id)}`, { method: "DELETE" }),
+  unsave_jobs: (job_ids) => call("/framework_api/saved-jobs/remove", { method: "POST", body: { job_ids } }),
+  clear_applied: () => call("/framework_api/saved-jobs?applied=true", { method: "DELETE" }),
 };
 
 const day = 24 * 60 * 60 * 1000;
@@ -103,6 +109,7 @@ export function to_criteria(filters, { rates, skill_ids = {}, designation_ids = 
     benefits: filters.benefits,
     application_methods: filters.easy ? ["Easy apply"] : filters.methods,
     job_ids: filters.saved ? (saved.length ? saved : ["-"]) : [],
+    recruiter_id: filters.recruiter || "",
     min_experience: filters.min_experience ? Number(filters.min_experience) : null,
     max_experience: number(filters.max_experience),
     interview_rounds: number(filters.rounds),

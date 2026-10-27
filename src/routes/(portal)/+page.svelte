@@ -16,7 +16,8 @@
     filter_error,
   } from "$lib/portal/search.js";
   import Modal from "$lib/portal/modal.svelte";
-  import { companies, jobs } from "$lib/portal/data";
+  import { companies_api, image_url } from "$lib/portal/companies_api.js";
+  import { location_label } from "$lib/portal/reference.js";
   import { search_filters, viewing_currency, toast } from "$lib/portal/state";
   import {
     platform_metrics,
@@ -31,26 +32,16 @@
   let job_location = "";
   let work_mode = "";
   let search_type = "jobs";
-  let company_query = "";
-  let company_location = "";
-  let company_country = "";
   let topic = "";
   let mobile_menu = false;
   let motion_paused = false;
   let page_root;
-  $: visible_companies = companies.filter(
-    (company) =>
-      `${company.name} ${company.sector} ${company.description}`
-        .toLowerCase()
-        .includes(company_query.toLowerCase()) &&
-      company.location.toLowerCase().includes(company_location.toLowerCase()) &&
-      company.location.toLowerCase().includes(company_country.toLowerCase()),
-  );
-
-  $: displayed_companies =
-    company_query || company_location || company_country
-      ? visible_companies
-      : visible_companies.slice(0, 3);
+  // A few real teams from the company directory (first page of search).
+  let featured_companies = [];
+  on_mount(async () => {
+    const result = await companies_api.search({ page: 1, page_size: 3 });
+    if (result.ok) featured_companies = result.data.companies;
+  });
 
   on_mount(() => {
     const previous = get(search_filters);
@@ -420,75 +411,33 @@
         </div>
         <div class="teams_directory">
           <div class="directory_heading">
-            <span>TEAMS TO GET TO KNOW</span><span
-              >Sample company directory <Icon
-                name="arrow-right"
-                size={14}
-              /></span
+            <span>TEAMS TO GET TO KNOW</span><a href="/companies"
+              >All companies <Icon name="arrow-right" size={14} /></a
             >
           </div>
-          <div class="company_search_status" aria-live="polite">
-            {#if company_query || company_location || company_country}<p>
-                {visible_companies.length} sample {visible_companies.length ===
-                1
-                  ? "company"
-                  : "companies"} matching {company_query
-                  ? `“${company_query}”`
-                  : "your search"}{company_location || company_country
-                  ? ` in ${[company_location, company_country].filter(Boolean).join(", ")}`
-                  : ""}.
-              </p>
-              <button
-                on:click={() => {
-                  company_query = "";
-                  company_location = "";
-                  company_country = "";
-                }}>Clear search</button
-              >{/if}
-          </div>
           <div class="teams_grid">
-            {#each displayed_companies as company}<button
+            {#each featured_companies as company (company.id)}<button
                 class="team_card"
-                on:click={() => goto(`/company/${company.id}`)}
-                ><Company_logo id={company.id} size={52} />
+                on:click={() => goto(`/company/${company.slug}`)}
+                ><Company_logo id={company.id} src={image_url(company.logo_url)} size={52} />
                 <div>
                   <h3>{company.name}</h3>
                   <p>{company.tagline}</p>
                   <div class="team_tags">
-                    <span>{company.sector}</span><span>{company.location}</span
-                    ><span>{company.size}</span>
+                    {#if company.industries[0]}<span>{company.industries[0]}</span>{/if}{#if company.hq_location_id}<span
+                        >{$location_label(company.hq_location_id)}</span
+                      >{/if}{#if company.size}<span>{company.size}</span>{/if}
                   </div>
                 </div>
-                <span class="team_openings"
-                  ><strong
-                    >{jobs.filter(
-                      (job) =>
-                        job.company === company.id &&
-                        !job.unlisted &&
-                        job.tier !== "Free" &&
-                        job.posted <= 30,
-                    ).length}</strong
-                  >open roles</span
-                ><span class="team_arrow"
-                  ><Icon name="arrow-up-right" size={21} /></span
-                ></button
-              >{/each}
+                <span class="team_arrow"><Icon name="arrow-up-right" size={21} /></span></button
+              >{:else}<div class="company_empty">
+                <h3>Teams are joining.</h3>
+                <p>Be one of the first companies people get to know here.</p>
+                <a class="r_button lime" href="/company/create"
+                  >Create a company <Icon name="arrow-right" size={16} /></a
+                >
+              </div>{/each}
           </div>
-          {#if !visible_companies.length}<div class="company_empty">
-              <h3>No matches just yet.</h3>
-              <p>
-                Try a name like Forma, or take a look at all our sample teams.
-              </p>
-              <button
-                class="r_button lime"
-                on:click={() => {
-                  company_query = "";
-                  company_location = "";
-                  company_country = "";
-                }}
-                >Show sample teams <Icon name="arrow-right" size={16} /></button
-              >
-            </div>{/if}
           <div class="hiring_invitation">
             <Icon name="building" size={22} />
             <div>

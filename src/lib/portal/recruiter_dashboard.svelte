@@ -11,6 +11,8 @@
   import { onMount as on_mount } from "svelte";
   import { jobs_api } from "./jobs_api.js";
   export let section = "overview";
+  // Your first company (admins first, from the layout), as in the header.
+  $: company = $page.data.companies?.[0];
   // Live: your posted jobs (last 60 days) and saved drafts.
   let live_jobs = [];
   let drafts = [];
@@ -126,11 +128,13 @@
           ><Icon name={icon} size={17} />{label}</a
         >{/each}<a href="/recruiter/post-job"
         ><Icon name="plus" size={17} />Post a job</a
-      ><span>COMPANY</span><a href="/company/forma/dashboard"
-        ><Icon name="building" size={17} />Company dashboard</a
-      ><a href="/company/forma/dashboard/wallet"
-        ><Icon name="money" size={17} />Wallet & allowance</a
-      >
+      ><span>COMPANY</span>{#if company?.role === "admin"}<a href={`/company/${company.slug}/dashboard`}
+          ><Icon name="building" size={17} />Company dashboard</a
+        ><a href={`/company/${company.slug}/dashboard/wallet`}
+          ><Icon name="money" size={17} />Wallet & allowance</a
+        >{:else if company}<a href={`/company/${company.slug}`}
+          ><Icon name="building" size={17} />My company</a
+        >{:else}<a href="/company/create"><Icon name="building" size={17} />Create a company</a>{/if}
     </aside>
     <div class="workspace_main">
       {#if section === "overview"}<div class="stat_grid">

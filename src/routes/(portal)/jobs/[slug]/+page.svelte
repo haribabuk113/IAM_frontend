@@ -299,6 +299,20 @@
             >Explore jobs<Icon name="arrow-up-right" size={15} /></a
           >
         </section>{/if}
+      {#if data.recruiter}<section class="detail_company_card">
+          <div class="sidebar_card_label">THE PERSON HIRING</div>
+          <h2>{data.recruiter.recruiter.name}</h2>
+          <p>
+            {data.recruiter.open_jobs
+              ? `${data.recruiter.open_jobs} open ${data.recruiter.open_jobs === 1 ? "role" : "roles"} on Referise.`
+              : "No other public roles right now."}
+          </p>
+          {#if data.recruiter.open_jobs}<a
+              href={`/jobs?recruiter=${data.recruiter.recruiter.id}`}
+              class="button button_outline button_full"
+              >See their roles<Icon name="arrow-up-right" size={15} /></a
+            >{/if}
+        </section>{/if}
       <section class="detail_skills_card">
         <span class="eyebrow_label">THE CRAFT YOU’LL BRING</span>
         {#if $page.data.user && skill_ids.length}<p class="detail_match" class:high={match >= 70}>
