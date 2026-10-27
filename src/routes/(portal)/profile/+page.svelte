@@ -3,9 +3,6 @@
   import Profile_journey from "$lib/portal/profile_journey.svelte";
   import Social_icon from "$lib/portal/social_icon.svelte";
   import Posting_analytics from "$lib/portal/posting_analytics.svelte";
-  import Job_card from "$lib/portal/job_card.svelte";
-  import { recruitment_jobs } from "$lib/portal/workspace_state.js";
-  import { jobs_by_poster } from "$lib/portal/posted_jobs.js";
   import {
     membership_open,
     premium_active,
@@ -23,11 +20,8 @@
     membership_open.set(true);
     membership_query_seen = true;
   }
-  $: posted_jobs = jobs_by_poster(
-    $recruitment_jobs,
-    "preview-alex",
-    public_preview,
-  );
+  // Your active posts; visitors (public preview) don't see direct-link-only (Free) ones.
+  $: posted_jobs = (data.posted_jobs ?? []).filter((j) => !public_preview || j.tier !== "Free");
   $: format_preference = (amount) =>
     new Intl.NumberFormat("en", {
       style: "currency",
@@ -70,6 +64,7 @@
   import { onDestroy as on_destroy } from "svelte";
   import { profile_error } from "$lib/portal/profile_validation.js";
   import Profile_skills from "$lib/portal/profile_skills.svelte";
+  import Profile_projects from "$lib/portal/profile_projects.svelte";
   import Profile_photo from "$lib/portal/profile_photo.svelte";
   import { profile_api, to_store, regroup } from "$lib/portal/profile_api.js";
   import { sync_my_skills } from "$lib/portal/my_skills.js";
@@ -108,7 +103,6 @@
   let skill_text = "";
   let public_preview = false;
   let resume_open = false;
-  let project_open = "";
   let sharing = false;
   let share_url = "";
   $: if ($resume_file && !resume_url)
@@ -537,51 +531,7 @@
                 </article>{/each}
             </div>
           </section>
-          <section class="profile_section">
-            <div class="profile_section_heading">
-              <h2>A few things I’ve made</h2>
-              <span class="section_label">SELECTED WORK</span>
-            </div>
-            <div class="portfolio_grid">
-              <button
-                class="portfolio_item"
-                on:click={() => (project_open = "A calmer way to work")}
-                ><div class="portfolio_art project_one">
-                  <div class="project_mini_window">
-                    <div><i></i><i></i><i></i></div>
-                    <span>Good morning, Alex.</span>
-                    <div class="mini_columns">
-                      <span></span><span></span><span></span>
-                    </div>
-                    <div class="mini_lines"><i></i><i></i><i></i></div>
-                  </div>
-                  <span class="project_annotation"
-                    >less noise.<br />more focus.</span
-                  >
-                </div>
-                <div class="portfolio_caption">
-                  <h3>A calmer way to work</h3>
-                  <Icon name="arrow-up-right" size={16} />
-                  <p>Product strategy · UX/UI design</p>
-                </div></button
-              ><button
-                class="portfolio_item"
-                on:click={() => (project_open = "A shared design language")}
-                ><div class="portfolio_art project_two">
-                  <span class="design_letter">Aa<span>↗</span></span>
-                  <div class="design_swatches">
-                    <i></i><i></i><i></i><i></i>
-                  </div>
-                  <span class="design_system_tag">THE FOUNDATIONS / 01</span>
-                </div>
-                <div class="portfolio_caption">
-                  <h3>A shared design language</h3>
-                  <Icon name="arrow-up-right" size={16} />
-                  <p>Design systems · Visual design</p>
-                </div></button
-              >
-            </div>
-          </section>
+          <Profile_projects readonly={public_preview} />
         {:else if current_tab === "jobs"}
           <section class="profile_section">
             <div class="profile_section_heading">
@@ -595,17 +545,19 @@
                 >{/if}
             </div>
             <p class="small_text">
-              Active sample listings{public_preview
+              Active listings{public_preview
                 ? ""
                 : " · Includes your direct-link listings"}.
             </p>
             <div class="profile_posted_jobs">
-              {#each posted_jobs as job}<Job_card
-                  {job}
-                  href={jobs.some((j) => j.id === job.id)
-                    ? `/jobs/${job.id}`
-                    : `/recruiter/jobs/${job.id}${public_preview ? "?public=1" : ""}`}
-                />{:else}<p>No active jobs to show.</p>{/each}
+              {#each posted_jobs as job (job.id)}<a class="workspace_hint" href={`/jobs/${job.id}`}>
+                  <strong>{job.title}</strong>
+                  <span class="small_text">
+                    {job.company_name || "Confidential"} · {job.tier === "Free" ? "Direct link only" : job.tier}
+                    · Posted {new Date(job.posted_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                    {#if !public_preview}· {job.views} views · {job.applications} applications{/if}
+                  </span>
+                </a>{:else}<p>No active jobs to show.</p>{/each}
             </div>
           </section>
         {:else if current_tab === "activity"}<div class="analytics_tabs">
@@ -1177,45 +1129,6 @@
         >{$resume_file ? "Download résumé" : "Download sample text résumé"}
         <Icon name="download" size={16} /></button
       >
-    </div></Modal
-  >{/if}
-{#if project_open}<Modal
-    title={project_open}
-    wide
-    on:close={() => (project_open = "")}
-    ><div class="case_study">
-      <span class="eyebrow_label">SELECTED WORK / SAMPLE CASE STUDY</span>
-      <h3>
-        {project_open === "A calmer way to work"
-          ? "Helping teams find focus."
-          : "Making consistency feel effortless."}
-      </h3>
-      <p>
-        {project_open === "A calmer way to work"
-          ? "A product concept that brings tasks, conversations, and priorities into one quiet workspace. The goal was to make the next useful action easy to see."
-          : "A flexible system of foundations and components designed to help a growing team create a consistent, accessible product experience."}
-      </p>
-      <dl>
-        <div>
-          <dt>My role</dt>
-          <dd>Product design, research, and prototyping</dd>
-        </div>
-        <div>
-          <dt>The approach</dt>
-          <dd>Listen first. Explore openly. Refine through feedback.</dd>
-        </div>
-        <div>
-          <dt>The work</dt>
-          <dd>
-            {project_open === "A calmer way to work"
-              ? "Customer interviews, journey mapping, interaction design, and an interactive prototype."
-              : "Component audit, design tokens, accessible states, and documentation for designers and engineers."}
-          </dd>
-        </div>
-      </dl>
-      <p class="small_text muted">
-        This is an illustrative portfolio entry in the profile preview.
-      </p>
     </div></Modal
   >{/if}
 {#if sharing}<Modal

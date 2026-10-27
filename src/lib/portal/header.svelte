@@ -121,7 +121,7 @@
       {#if user || $preview_account.enabled}<button
           class="header_balance"
           on:click={() => membership_open.set(true)}
-          aria-label="Preview application allowance and credits"
+          aria-label="Free applications left today and credits"
           ><strong
             >{$premium_active
               ? "Unlimited"

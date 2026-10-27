@@ -52,9 +52,21 @@
       toast(share_url);
     }
   }
+  // Manual: after the employer's site opens, ask "Did you apply?" when the
+  // candidate returns to this tab; "Yes" records it as applied.
+  let external_pending = false;
+  let ask_applied = false;
   async function apply_external() {
     window.open(data.job.external_url, "_blank", "noopener");
     jobs_api.outbound(job.id); // referral tracking; the page opens regardless
+    external_pending = !!$page.data.user;
+  }
+  async function confirm_external() {
+    ask_applied = external_pending = false;
+    const result = await jobs_api.apply_external(job.id);
+    if (!result.ok) return toast(result.error);
+    toast("Marked as applied. Find it in your applications.");
+    invalidate_all();
   }
   async function manage(action) {
     busy = true;
@@ -70,6 +82,11 @@
   }
 </script>
 
+<svelte:window
+  on:focus={() => {
+    if (external_pending) ask_applied = true;
+  }}
+/>
 <svelte:head
   ><title>{job.title} at {company_name} — Referise</title><meta
     name="description"
@@ -313,6 +330,16 @@
     </aside>
   </div>
 </main>
+{#if ask_applied}<Modal title="Did you apply?" on:close={() => (ask_applied = external_pending = false)}
+    ><p class="modal_description">
+      Did you complete your application for {job.title} at {company_name}?
+    </p>
+    <div class="modal_actions">
+      <button class="button button_outline" on:click={() => (ask_applied = external_pending = false)}
+        >No, not yet</button
+      ><button class="button button_dark" on:click={confirm_external}>Yes, I applied</button>
+    </div></Modal
+  >{/if}
 {#if report_dialog}<Modal title="Help keep things clear." on:close={() => (report_dialog = false)}
     ><form on:submit|preventDefault={submit_report}>
       <p class="modal_description">

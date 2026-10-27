@@ -35,6 +35,16 @@ export const jobs_api = {
   save_draft: (id, form) =>
     call(`/framework_api/recruiter/drafts${id ? `/${enc(id)}` : ""}`, { method: id ? "PUT" : "POST", body: { form } }),
   delete_draft: (id) => call(`/framework_api/recruiter/drafts/${enc(id)}`, { method: "DELETE" }),
+  // Applications: Easy Apply (uses a free application), "Yes, I applied" for
+  // external jobs, your list and today's quota; recruiters' applicant pipeline.
+  apply: (job_id) => call("/framework_api/applications", { method: "POST", body: { job_id } }),
+  apply_external: (job_id) => call("/framework_api/applications/external", { method: "POST", body: { job_id } }),
+  my_applications: () => call("/framework_api/applications"),
+  quota: () => call("/framework_api/applications/quota"),
+  applicants: (job_id, { stage = "", min_match = 0, sort = "recent" } = {}) =>
+    call(`/framework_api/recruiter/jobs/${enc(job_id)}/applications?` +
+      new URLSearchParams({ ...(stage && { stage }), ...(min_match && { min_match: String(min_match) }), sort })),
+  set_stage: (id, stage) => call(`/framework_api/recruiter/applications/${enc(id)}`, { method: "PATCH", body: { stage } }),
 };
 
 const day = 24 * 60 * 60 * 1000;

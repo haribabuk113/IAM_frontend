@@ -491,6 +491,7 @@ export const default_profile = {
   about_updated: "",
   languages: [{ name: "English", proficiency: "Fluent" }],
   authorizations: [],
+  projects: [],
   experiences: [
     {
       company: "Forma",

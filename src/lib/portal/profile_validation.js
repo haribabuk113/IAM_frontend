@@ -41,6 +41,14 @@ const arrays = {
       ["until", "string"],
       ["indefinite", "boolean"],
     ]),
+  projects: (item) =>
+    shape(item, [
+      ["title", "string"],
+      ["description", "string"],
+      ["url", "string"],
+    ]) &&
+    Array.isArray(item.tags) &&
+    item.tags.every(text),
   education: (item) =>
     shape(item, [
       ["institution", "string"],

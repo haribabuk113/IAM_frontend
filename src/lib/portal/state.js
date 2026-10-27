@@ -13,6 +13,9 @@ export const resume_file = writable(null);
 export const notification = writable("");
 let hydrated = false;
 let timer;
+// Same shape the job proxy accepts; the search API takes at most 200 job ids.
+const job_id_pattern = /^[a-z0-9][a-z0-9-]{1,148}$/;
+const max_saved = 200;
 export function toast(message) {
   clearTimeout(timer);
   notification.set(message);
@@ -39,7 +42,13 @@ function persist(key, value) {
 export function hydrate_preview() {
   if (!browser || hydrated) return;
   hydrated = true;
-  const valid_ids = new Set(jobs.map((job) => job.id));
+  // Saved jobs are live job ids (uuids, or slugs for older jobs); applications
+  // are still sample-only, so they keep only sample ids.
+  const sample_ids = new Set(jobs.map((job) => job.id));
+  const valid = {
+    saved: (id) => job_id_pattern.test(id),
+    applications: (id) => sample_ids.has(id),
+  };
   for (const [key, store] of [
     ["saved", saved_jobs],
     ["applications", applications],
@@ -47,7 +56,7 @@ export function hydrate_preview() {
     const value = read(key);
     if (Array.isArray(value))
       store.set(
-        value.filter((id) => typeof id === "string" && valid_ids.has(id)),
+        [...new Set(value.filter((id) => typeof id === "string" && valid[key](id)))].slice(-max_saved),
       );
     store.subscribe((next) => persist(key, next));
   }
@@ -69,7 +78,7 @@ export function hydrate_preview() {
 export function toggle_saved(id) {
   const was_saved = get(saved_jobs).includes(id);
   saved_jobs.update((value) =>
-    was_saved ? value.filter((item) => item !== id) : [...value, id],
+    was_saved ? value.filter((item) => item !== id) : [...value, id].slice(-max_saved),
   );
   toast(
     was_saved
