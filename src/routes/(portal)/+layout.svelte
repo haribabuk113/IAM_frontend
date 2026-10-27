@@ -18,7 +18,15 @@
   import Icon from "$lib/portal/icon.svelte";
   import { hydrate_preview, notification } from "$lib/portal/state";
   import { hydrate_workspace } from "$lib/portal/workspace_state.js";
+  import { sync_my_skills, clear_my_skills } from "$lib/portal/my_skills.js";
+  import { browser } from "$app/environment";
   export let data;
+  // Manual: skills sync only on the profile, job search, job details and
+  // company/recruiter job pages; signed-out visitors keep no skills.
+  const sync_routes = /^\/(profile|jobs|company|recruiter)(\/|$)/;
+  $: if (browser && !data.user) clear_my_skills();
+  $: path = $page.url.pathname; // a string, so query-only changes don't re-sync
+  $: if (browser && data.user && sync_routes.test(path)) sync_my_skills();
   let offline = false;
   hydrate_preview();
   hydrate_workspace();

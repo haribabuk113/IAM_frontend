@@ -1336,3 +1336,33 @@
     margin-top: 6px;
   }
 }
+/* Job details: one-click skill chips and the live match score. */
+.detail_match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 10px 0 12px;
+  font-size: 13px;
+  color: #667188;
+}
+.detail_match strong {
+  color: #192649;
+  font-size: 15px;
+}
+.detail_match.high strong {
+  color: #28714e;
+}
+.detail_skill_toggles {
+  max-height: none;
+  gap: 8px;
+}
+.detail_skill_toggles button {
+  font-size: 13px;
+  padding: 7px 11px;
+  min-height: 36px;
+}
+.detail_skill_toggles button:focus-visible {
+  outline: 2px solid #3155ef;
+  outline-offset: 1px;
+}

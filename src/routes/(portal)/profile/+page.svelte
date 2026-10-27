@@ -72,6 +72,7 @@
   import Profile_skills from "$lib/portal/profile_skills.svelte";
   import Profile_photo from "$lib/portal/profile_photo.svelte";
   import { profile_api, to_store, regroup } from "$lib/portal/profile_api.js";
+  import { sync_my_skills } from "$lib/portal/my_skills.js";
   import { designations as designation_terms } from "$lib/portal/reference.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
   import { notice_periods } from "$lib/portal/filter_options.js";
@@ -215,6 +216,7 @@
       return;
     }
     profile.set(to_store(result.data));
+    if (editing === "skills") sync_my_skills();
     editing = "";
     toast("Profile updated. Your next chapter looks good on you.");
   }

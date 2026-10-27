@@ -14,6 +14,8 @@
   import Company_logo from "./company_logo.svelte";
   import Icon from "./icon.svelte";
   import Modal from "./modal.svelte";
+  import { page } from "$app/stores";
+  import { my_skill_names, toggle_my_skill } from "./my_skills.js";
   export let job;
   export let href = "";
   export let currency = "";
@@ -28,12 +30,23 @@
       ? { ...get_company(job.company), name: job.company_name }
       : get_company(job.company);
   $: target_currency = currency || $viewing_currency;
-  $: match = skill_match(job, $profile.skills);
+  // Signed in: the synced profile skills; signed out: the preview profile.
+  $: signed_in = !!$page.data.user;
+  $: my_names = signed_in ? $my_skill_names : $profile.skills;
+  $: match = skill_match(job, my_names);
   $: locations = [
     ...new Set((job.location_ids ?? job.locations ?? []).map($location_label)),
   ];
-  $: owned = new Set($profile.skills.map((s) => s.toLowerCase()));
-  function add_skill() {
+  $: owned = new Set(my_names.map((s) => s.toLowerCase()));
+  async function add_skill() {
+    const id = job.skill_ids?.[job.skills.indexOf(pending_skill)];
+    if (signed_in && id) {
+      const skill = pending_skill;
+      pending_skill = "";
+      const error = await toggle_my_skill(id, skill);
+      toast(error || `${skill} added to your profile.`);
+      return;
+    }
     profile.update((p) => {
       const groups = structuredClone(p.skill_groups ?? []);
       if (
@@ -107,8 +120,10 @@
   <div class="job_card_content">
     <div class="job_match">
       <strong>{match}% skill match</strong><span
-        title="Illustrative match: the share of job skills present in your preview profile."
-        >Preview profile</span
+        title={signed_in
+          ? "The share of this job's skills on your profile."
+          : "Illustrative match: the share of job skills present in your preview profile."}
+        >{signed_in ? "Your profile" : "Preview profile"}</span
       >
     </div>
     <div class="matching_skills" class:expanded={all_skills}>
@@ -159,7 +174,7 @@
     on:close={() => (pending_skill = "")}
     ><p>
       Only add skills you have experience with. This updates your profile and
-      the preview match scores.
+      your match scores.
     </p>
     <div class="modal_actions">
       <button

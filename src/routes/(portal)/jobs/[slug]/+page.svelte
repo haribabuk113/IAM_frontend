@@ -11,7 +11,17 @@
   import { render_markdown } from "$lib/portal/markdown.js";
   import { jobs_api, to_card } from "$lib/portal/jobs_api.js";
   import { image_url } from "$lib/portal/companies_api.js";
+  import { my_skill_ids, toggle_my_skill } from "$lib/portal/my_skills.js";
   export let data;
+  // Manual: required skills are one-click chips (red + adds, green − removes)
+  // and the match score recalculates on the spot. Ids pair with job.skills.
+  $: skill_ids = data.job.skill_ids ?? [];
+  $: matched = skill_ids.filter((id) => $my_skill_ids.has(id)).length;
+  $: match = skill_ids.length ? Math.round((100 * matched) / skill_ids.length) : 0;
+  async function toggle_skill(id, name) {
+    const error = await toggle_my_skill(id, name);
+    if (error) toast(error);
+  }
   $: job = to_card(data.job, $location_label);
   $: company = data.job.company; // linked paid jobs only (manual: none for free/unlinked)
   $: company_name = company?.name || data.job.company_name || "Confidential";
@@ -274,9 +284,25 @@
         </section>{/if}
       <section class="detail_skills_card">
         <span class="eyebrow_label">THE CRAFT YOU’LL BRING</span>
-        <div class="skill_chips">
-          {#each job.skills as skill}<a href={`/jobs?skill=${encodeURIComponent(skill)}`}>{skill}</a>{/each}
-        </div>
+        {#if $page.data.user && skill_ids.length}<p class="detail_match" class:high={match >= 70}>
+            <strong>{match}% skill match</strong>
+            <span>{matched} of {skill_ids.length} skills on your profile</span>
+          </p>
+          <div class="matching_skills detail_skill_toggles">
+            {#each job.skills as skill, i}{@const owned = $my_skill_ids.has(skill_ids[i])}<button
+                type="button"
+                class:matched={owned}
+                class:missing={!owned}
+                aria-pressed={owned}
+                aria-label={owned ? `Remove ${skill} from your profile` : `Add ${skill} to your profile`}
+                on:click={() => toggle_skill(skill_ids[i], skill)}>{owned ? "−" : "+"} {skill}</button
+              >{/each}
+          </div>{:else}<div class="skill_chips">
+            {#each job.skills as skill}<a href={`/jobs?skill=${encodeURIComponent(skill)}`}>{skill}</a>{/each}
+          </div>
+          {#if !$page.data.user}<p class="detail_match">
+              <a href={"/login?next=" + encodeURIComponent($page.url.pathname)}>Sign in</a> to see your skill match.
+            </p>{/if}{/if}
       </section>
       <div class="detail_fairness_note">
         <Companion kind="sage" size={90} />

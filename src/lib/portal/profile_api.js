@@ -29,6 +29,10 @@ export const profile_api = {
   // data_url: the cropped photo (data:image/jpeg;base64,...)
   upload_photo: async (data_url) => call("/me/photo", { method: "PUT", image: await (await fetch(data_url)).blob() }),
   request_verification: (index) => call(`/me/experiences/${index}/verification`, { method: "POST" }),
+  // Skill sync and the job page's one-click chips (see my_skills.js).
+  skills: (signature) => call(`/me/skills?signature=${encodeURIComponent(signature)}`),
+  add_skill: (skill_id) => call("/me/skills", { method: "POST", body: { skill_id } }),
+  remove_skill: (skill_id) => call(`/me/skills/${skill_id}`, { method: "DELETE" }),
 };
 
 const amount = (value) => Math.max(0, Number(value) || 0);
