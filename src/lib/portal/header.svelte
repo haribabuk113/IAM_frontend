@@ -131,7 +131,7 @@
           >{user.name || user.email}</a
         ><button class="unified_signin" type="button" on:click={sign_out}
           >Sign out</button
-        >{:else if !$preview_account.enabled}<a class="unified_signin" href={sign_in_href}>Sign in</a>{/if}<a
+        >{:else}<a class="unified_signin" href={sign_in_href}>Sign in</a>{/if}<a
         class="unified_post"
         href="/recruiter/post-job">Post a job <Icon name="plus" size={16} /></a
       >
