@@ -48,6 +48,25 @@
   font-size: 10px;
   color: #64718a;
 }
+/* Manual mini ledger: green for additions, red for deductions. */
+.amount_credit {
+  color: #157f3b;
+}
+.amount_debit {
+  color: #b42318;
+}
+.header_topup {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: -4px;
+  border: 1px solid #dbe1ef;
+  border-radius: 10px;
+  background: white;
+  color: #182448;
+  cursor: pointer;
+}
 .membership_disclosure {
   font-size: 12px;
   line-height: 1.7;

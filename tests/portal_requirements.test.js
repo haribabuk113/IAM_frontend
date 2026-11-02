@@ -243,7 +243,7 @@ test("editing a draft does not change applied filters", () => {
   assert.deepEqual(filter_jobs(jobs, applied), before);
   assert.equal(filter_jobs(jobs, draft).length, 0);
 });
-test("profile migration retains existing privacy and rejects malformed nested data", () => {
+test("profile migration keeps restricted fields private and rejects malformed nested data", () => {
   const restored = restore_profile(
     {
       name: "Test Person",
@@ -258,9 +258,11 @@ test("profile migration retains existing privacy and rejects malformed nested da
     default_profile,
   );
   assert.equal(restored.name, "Test Person");
-  assert.equal(restored.salary_private, true);
-  assert.equal(restored.resume_private, true);
-  assert.equal(restored.contact_private, true);
+  // The old booleans map to nothing: every restricted field stays at its private default.
+  assert.equal(restored.current_salary_visibility, "hidden");
+  assert.equal(restored.expected_salary_visibility, "applied");
+  assert.equal(restored.resume_visibility, "applied");
+  assert.equal(restored.contact_visibility, "applied");
   assert.deepEqual(restored.languages, default_profile.languages);
   assert.deepEqual(restored.social_links, []);
   assert.equal(restored.current_salary, default_profile.current_salary);
@@ -272,9 +274,15 @@ test("profile validation catches reserved handles, date inversions and missing a
   assert.equal(profile_error(default_profile), "");
   assert.match(profile_error({ ...default_profile, slug: "admin" }), /handle/);
   assert.match(
-    profile_error({ ...default_profile, is_serving_notice: true }),
+    profile_error({ ...default_profile, availability: "Serving notice" }),
     /working date/,
   );
+  assert.match(
+    profile_error({ ...default_profile, availability: "Available from date" }),
+    /available from/,
+  );
+  assert.match(profile_error({ ...default_profile, notice_unit: "months", notice_value: 13 }), /notice period/);
+  assert.equal(profile_error({ ...default_profile, notice_unit: "weeks", notice_value: 52 }), "");
   const draft = structuredClone(default_profile);
   draft.experiences[0].current = false;
   draft.experiences[0].end = "2020-01";
@@ -307,4 +315,14 @@ test("salaries show in the original currency until rates are known", () => {
   const job = { salary_min: 100, salary_max: 200, currency: "USD", salary_hidden: false };
   assert.match(converted_salary(job, "JPY", { INR: 1, USD: 85 }), /^\$100–\$200/);
   assert.match(converted_salary(job, "INR", { INR: 1, USD: 85 }), /₹8,500–₹17,000/);
+});
+
+test("landing counters come from the stats API, shown rounded down", async () => {
+  const { platform_metrics, metric_value } = await import("../src/lib/portal/landing_content.js");
+  assert.deepEqual(
+    platform_metrics.map((m) => m.key),
+    ["registered_users", "hr_professionals", "companies", "open_jobs", "countries_with_users", "countries_with_jobs_companies"],
+  );
+  for (const [n, want] of [[0, "0"], [9, "9"], [999, "999"], [1000, "1K+"], [1290, "1.2K+"], [25400, "25K+"], [100000, "100K+"], [3456789, "3.4M+"], [null, "0"]])
+    assert.equal(metric_value(n), want, `metric_value(${n})`);
 });

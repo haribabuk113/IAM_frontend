@@ -10,6 +10,7 @@
   import { rates, location_label, currency_options } from "$lib/portal/reference.js";
   import { render_markdown } from "$lib/portal/markdown.js";
   import { jobs_api, to_card } from "$lib/portal/jobs_api.js";
+  import { pay_for_job } from "$lib/portal/payments.js";
   import { image_url } from "$lib/portal/companies_api.js";
   import { my_skill_ids, toggle_my_skill } from "$lib/portal/my_skills.js";
   export let data;
@@ -76,6 +77,16 @@
     toast(action === "close" ? "Applications closed." : "Reposted for another 30 days.");
     invalidate_all();
   }
+  // Out of pocket, fee not paid yet: a new order, then wait for the webhook.
+  async function pay() {
+    busy = true;
+    const { outcome, error } = await pay_for_job(job.id);
+    busy = false;
+    if (outcome === "published") toast("Payment received. Your job is live.");
+    else if (outcome === "pending") toast("Payment received. The job goes live once Razorpay confirms it.");
+    else if (error) toast(error);
+    invalidate_all();
+  }
   function submit_report() {
     report_dialog = false;
     toast("Feedback captured for this preview. No report was sent.");
@@ -140,7 +151,7 @@
       <div class="detail_location">
         <span><Icon name="location" size={15} />{job.location}</span><span
           class="green_dot_label"
-          ><span></span>{open ? "Actively hiring" : data.job.status === "expired" ? "Listing expired" : "Applications closed"}</span
+          ><span></span>{open ? "Actively hiring" : data.job.status === "expired" ? "Listing expired" : data.job.status === "pending_payment" ? "Awaiting payment" : "Applications closed"}</span
         ><span
           >Posted {job.posted === 0
             ? "today"
@@ -266,6 +277,8 @@
           <div class="workspace_actions">
             {#if open}<button class="button button_outline button_small" disabled={busy} on:click={() => manage("close")}
                 >Close applications</button
+              >{:else if data.job.status === "pending_payment"}<button class="button button_dark button_small" disabled={busy} on:click={pay}
+                >{busy ? "Waiting for payment…" : "Pay to publish"}</button
               >{:else}<button class="button button_dark button_small" disabled={busy} on:click={() => manage("repost")}
                 >Repost for 30 days</button
               >{/if}<a class="button button_outline button_small" href={`/recruiter/post-job?edit=${job.id}`}>Edit</a>

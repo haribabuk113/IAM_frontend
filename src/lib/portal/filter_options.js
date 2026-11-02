@@ -20,6 +20,28 @@ export const notice_periods = [
   "90 days",
   "More than 90 days",
 ];
+// Profile choices (backend domain/profiles: Availabilities, TravelOptions, SalaryPeriods).
+export const availability_options = [
+  "Available immediately",
+  "Currently employed",
+  "Serving notice",
+  "Available from date",
+  "Not available",
+];
+export const travel_options = [
+  "No travel",
+  "Occasional travel",
+  "Up to 25%",
+  "Up to 50%",
+  "Up to 75%",
+  "Up to 100%",
+];
+export const salary_periods = ["year", "month", "hour"];
+export const visibility_labels = {
+  all: "Visible to all",
+  applied: "Applied jobs only",
+  hidden: "Hidden from all",
+};
 export const relocation_options = [
   "On their own",
   "Supported locally",

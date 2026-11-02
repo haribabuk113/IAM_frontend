@@ -10,6 +10,7 @@
   import { toast } from "./state.js";
   import { onMount as on_mount } from "svelte";
   import { jobs_api } from "./jobs_api.js";
+  import { pay_for_job } from "./payments.js";
   export let section = "overview";
   // Your first company (admins first, from the layout), as in the header.
   $: company = $page.data.companies?.[0];
@@ -21,7 +22,9 @@
   async function load_jobs() {
     const [mine, saved] = await Promise.all([jobs_api.mine(), jobs_api.drafts()]);
     jobs_error = mine.ok ? "" : mine.status === 401 ? "Sign in to see your jobs." : mine.error;
-    live_jobs = mine.ok ? mine.data.map((j) => ({ ...j, status: capital(j.status) })) : [];
+    live_jobs = mine.ok
+      ? mine.data.map((j) => ({ ...j, status: j.status === "pending_payment" ? "Awaiting payment" : capital(j.status) }))
+      : [];
     drafts = saved.ok
       ? saved.data.map((d) => ({ id: d.id, draft: true, title: d.form.title || "Untitled draft", tier: d.form.tier || "Free",
           company_name: d.form.company_name || "", status: "Draft", applications: 0, views: 0 }))
@@ -80,6 +83,17 @@
     closing = null;
     if (!result.ok) return toast(result.error);
     toast("Applications closed.");
+    load_jobs();
+  }
+  // An out-of-pocket post whose fee wasn't paid yet: pay now (a new order).
+  let paying = "";
+  async function pay(job) {
+    paying = job.id;
+    const { outcome, error } = await pay_for_job(job.id);
+    paying = "";
+    if (outcome === "published") toast("Payment received. Your job is live.");
+    else if (outcome === "pending") toast("Payment received. The job goes live once Razorpay confirms it.");
+    else if (error) toast(error);
     load_jobs();
   }
   async function repost(job) {
@@ -183,7 +197,7 @@
             placeholder="Search job title"
             bind:value={query}
           /><select aria-label="Job status" bind:value={status}
-            >{#each ["All", "Active", "Draft", "Closed", "Expired"] as value}<option
+            >{#each ["All", "Active", "Awaiting payment", "Draft", "Closed", "Expired"] as value}<option
                 >{value}</option
               >{/each}</select
           ><a class="button button_dark" href="/recruiter/post-job"
@@ -242,6 +256,10 @@
                           >{#if !job.draft}<a href={`/jobs/${job.id}`}>View</a>{/if}{#if job.status === "Active"}<button
                               class="text_action"
                               on:click={() => (closing = job)}>Close</button
+                            >{:else if job.status === "Awaiting payment"}<button
+                              class="text_action"
+                              disabled={paying === job.id}
+                              on:click={() => pay(job)}>{paying === job.id ? "Paying…" : "Pay to publish"}</button
                             >{:else if !job.draft}<button
                               class="text_action"
                               on:click={() => repost(job)}>Repost</button

@@ -32,7 +32,7 @@
         ($rates[$viewing_currency] ?? 1),
     );
   async function copy_resume() {
-    if ($profile.resume_private) {
+    if ($profile.resume_visibility !== "all") {
       toast(
         "Make your résumé public in Preferences before sharing its preview link.",
       );
@@ -52,7 +52,7 @@
   $: if (
     $page.url.searchParams.get("resume") === "1" &&
     !resume_query_seen &&
-    !$profile.resume_private &&
+    $profile.resume_visibility === "all" &&
     $profile.visible
   ) {
     resume_open = true;
@@ -66,11 +66,11 @@
   import Profile_skills from "$lib/portal/profile_skills.svelte";
   import Profile_projects from "$lib/portal/profile_projects.svelte";
   import Profile_photo from "$lib/portal/profile_photo.svelte";
-  import { profile_api, to_store, regroup } from "$lib/portal/profile_api.js";
+  import { profile_api, to_store, regroup, availability_text } from "$lib/portal/profile_api.js";
   import { sync_my_skills } from "$lib/portal/my_skills.js";
   import { designations as designation_terms } from "$lib/portal/reference.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
-  import { notice_periods } from "$lib/portal/filter_options.js";
+  import { visibility_labels } from "$lib/portal/filter_options.js";
   import { location_label, rates } from "$lib/portal/reference.js";
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
@@ -106,22 +106,18 @@
   on_destroy(() => {
     if (resume_url) URL.revokeObjectURL(resume_url);
   });
+  // Who sees each restricted field: everyone, or only recruiters of jobs you
+  // apply to; your current salary can also be hidden from everyone.
+  const visibility_options = [
+    { key: "current_salary_visibility", title: "Current salary", choices: ["all", "applied", "hidden"] },
+    { key: "expected_salary_visibility", title: "Expected salary", choices: ["all", "applied"] },
+    { key: "hourly_rate_visibility", title: "Hourly rate", choices: ["all", "applied"] },
+    { key: "resume_visibility", title: "Résumé", choices: ["all", "applied"] },
+    { key: "contact_visibility", title: "Contact details", choices: ["all", "applied"] },
+  ];
+  // Public visitors (and the public preview) see a field only when it's visible to all.
+  $: shows = (key) => !public_preview || $profile[key] === "all";
   const privacy_options = [
-    {
-      key: "current_salary_private",
-      title: "Keep current salary private",
-      text: "Hide your current compensation from public visitors.",
-    },
-    {
-      key: "hourly_private",
-      title: "Keep hourly rate private",
-      text: "Hide your hourly rate from public visitors.",
-    },
-    {
-      key: "contact_private",
-      title: "Keep contact details private",
-      text: "Hide your email and phone from public visitors.",
-    },
     {
       key: "visible",
       title: "Public profile",
@@ -131,16 +127,6 @@
       key: "open",
       title: "Open to opportunities",
       text: "Show that you’re open to hearing about your next role.",
-    },
-    {
-      key: "salary_private",
-      title: "Keep compensation private",
-      text: "Hide your salary expectations from your public profile.",
-    },
-    {
-      key: "resume_private",
-      title: "Share résumé with applications only",
-      text: "Hide the résumé from visitors to your public profile.",
     },
   ];
   $: current_tab = data.visitor
@@ -176,8 +162,12 @@
     });
     return (visitor ? `/profiles/${$profile.slug}` : "/profile") + (query.size ? "?" + query : "");
   };
+  // The old notice select set only the filter bucket: start the number + unit from it.
+  const bucket_days = { Immediate: 0, "15 days": 15, "30 days": 30, "45 days": 45, "60 days": 60, "90 days": 90, "More than 90 days": 120 };
   function edit(section) {
     draft = structuredClone($profile);
+    if (!draft.notice_unit)
+      [draft.notice_unit, draft.notice_value] = ["days", bucket_days[draft.notice] ?? 30];
     skill_text = draft.skills.join(", ");
     editing = section;
   }
@@ -217,10 +207,27 @@
       toast(result.error);
       return;
     }
+    // Editing a verified experience sends it back to the company for review.
+    const rereview = result.data.experiences.some(
+      (e, i) => e.verification === "Pending" && $profile.experiences[i]?.verification === "Verified",
+    );
     profile.set(to_store(result.data));
     if (editing === "skills") sync_my_skills();
     editing = "";
-    toast("Profile updated. Your next chapter looks good on you.");
+    toast(
+      rereview
+        ? "Profile updated. You edited a verified experience, so the company will review it again."
+        : "Profile updated. Your next chapter looks good on you.",
+    );
+  }
+  async function set_visibility(key, value) {
+    const result = await profile_api.save({ ...$profile, [key]: value });
+    if (!result.ok) {
+      toast(result.error);
+      return;
+    }
+    profile.set(to_store(result.data));
+    toast("Privacy preference saved.");
   }
   async function privacy(key) {
     const result = await profile_api.save({ ...$profile, [key]: !$profile[key] });
@@ -407,17 +414,17 @@
               $preview_account.premium_until,
             ).toLocaleDateString()}</span
           >{/if}
-        {#if !public_preview || !$profile.contact_private}<a
+        {#if shows("contact_visibility")}<a
             href={`mailto:${$profile.email}`}>{$profile.email}</a
           >{#if $profile.phone}<a href={`tel:${$profile.phone}`}
               >{$profile.phone}</a
             >{/if}{/if}
-        {#if !visitor && (!public_preview || !$profile.resume_private)}<button
+        {#if !visitor && shows("resume_visibility")}<button
             class="text_link"
             on:click={() => (resume_open = true)}>View résumé ↗</button
           >{/if}
         <button class="text_link" on:click={share}>Copy profile link</button>
-        {#if !visitor && (!public_preview || !$profile.resume_private)}<button
+        {#if !visitor && shows("resume_visibility")}<button
             class="text_link"
             on:click={copy_resume}>Copy résumé link</button
           >{/if}
@@ -506,7 +513,9 @@
                         >{#if experience.verification === "Verified"}<span
                             class="verified_employment"
                             ><Icon name="shield" size={13} />Employer verified</span
-                          >{:else if !public_preview}{experience.verification}{/if}</span
+                          >{:else if !public_preview}{experience.verification === "Pending"
+                            ? "Pending company review"
+                            : experience.verification}{/if}</span
                       >
                     </p>
                     {#if experience.promoted}<span class="promoted_tag"
@@ -691,16 +700,16 @@
                 <dd>{$profile.work_mode}</dd>
               </div>
               <div>
-                <dt>Minimum expected annual salary</dt>
-                <dd>{format_preference($profile.expected_salary)} / year</dd>
+                <dt>Minimum expected salary</dt>
+                <dd>{format_preference($profile.expected_salary)} / {$profile.expected_salary_period}</dd>
               </div>
               <div>
-                <dt>Notice period</dt>
-                <dd>
-                  {$profile.is_serving_notice
-                    ? `Last working day: ${$profile.last_working_date}`
-                    : $profile.notice}
-                </dd>
+                <dt>Availability</dt>
+                <dd>{availability_text($profile)}</dd>
+              </div>
+              <div>
+                <dt>Travel</dt>
+                <dd>{$profile.travel || "No preference"}</dd>
               </div>
             </dl>
           </section>
@@ -713,6 +722,27 @@
               Choose what others can see. Use the public preview to check how
               these preferences change your profile.
             </p>
+            {#each visibility_options as option}<div class="privacy_preference">
+                <div>
+                  <strong>{option.title}</strong>
+                  <p>
+                    {$profile[option.key] === "all"
+                      ? "Anyone who opens your profile can see it."
+                      : $profile[option.key] === "applied"
+                        ? "Only recruiters of jobs you apply to can see it."
+                        : "Nobody sees it, not even recruiters you apply to."}
+                  </p>
+                </div>
+                <select
+                  class="field_input"
+                  aria-label={`${option.title} visibility`}
+                  value={$profile[option.key]}
+                  on:change={(e) => set_visibility(option.key, e.currentTarget.value)}
+                  >{#each option.choices as choice}<option value={choice}
+                      >{visibility_labels[choice]}</option
+                    >{/each}</select
+                >
+              </div>{/each}
             {#each privacy_options as preference}<div
                 class="privacy_preference"
               >
@@ -842,22 +872,18 @@
               <dt><Icon name="laptop" size={14} />WORK ARRANGEMENT</dt>
               <dd>{$profile.work_mode}</dd>
             </div>
-            {#if !public_preview || !$profile.salary_private}<div>
+            {#if shows("expected_salary_visibility")}<div>
                 <dt><Icon name="money" size={14} />MINIMUM EXPECTED SALARY</dt>
                 <dd>
-                  {format_preference($profile.expected_salary)} / year{#if $profile.salary_private}<span
+                  {format_preference($profile.expected_salary)} / {$profile.expected_salary_period}{#if $profile.expected_salary_visibility !== "all"}<span
                       class="private_label"
-                      ><Icon name="lock" size={10} />Only you</span
+                      ><Icon name="lock" size={10} />{visibility_labels[$profile.expected_salary_visibility]}</span
                     >{/if}
                 </dd>
               </div>{/if}
             <div>
-              <dt><Icon name="clock" size={14} />READY TO START IN</dt>
-              <dd>
-                {$profile.is_serving_notice
-                  ? `Last working day: ${$profile.last_working_date}`
-                  : $profile.notice}
-              </dd>
+              <dt><Icon name="clock" size={14} />READY TO START</dt>
+              <dd>{availability_text($profile)}</dd>
             </div>
             <div>
               <dt>EMPLOYMENT TYPES</dt>
@@ -876,14 +902,21 @@
               <dt>RELOCATION</dt>
               <dd>{$profile.relocation || "No preference"}</dd>
             </div>
-            {#if !public_preview || !$profile.current_salary_private}<div>
+            <div>
+              <dt>TRAVEL</dt>
+              <dd>{$profile.travel || "No preference"}</dd>
+            </div>
+            {#if shows("current_salary_visibility")}<div>
                 <dt>CURRENT SALARY</dt>
                 <dd>
                   {$profile.salary_currency}
-                  {$profile.current_salary.toLocaleString()} / year
+                  {$profile.current_salary.toLocaleString()} / {$profile.current_salary_period}{#if !public_preview}<span
+                      class="private_label"
+                      ><Icon name="lock" size={10} />{visibility_labels[$profile.current_salary_visibility]}</span
+                    >{/if}
                 </dd>
               </div>{/if}
-            {#if !public_preview || !$profile.hourly_private}<div>
+            {#if shows("hourly_rate_visibility")}<div>
                 <dt>HOURLY GIG RATE</dt>
                 <dd>
                   {$profile.hourly_rate
@@ -893,7 +926,7 @@
               </div>{/if}
           </dl>
         </section>
-        {#if !visitor && (!public_preview || !$profile.resume_private)}<section
+        {#if !visitor && shows("resume_visibility")}<section
             class="profile_side_card resume_card"
           >
             <div class="side_card_heading">
@@ -929,12 +962,12 @@
                 ></label
               >
               <p class="resume_privacy">
-                <Icon name="lock" size={11} />{$profile.resume_private
-                  ? "Shared with applications only"
-                  : "Visible on your public profile"}
+                <Icon name="lock" size={11} />{$profile.resume_visibility === "all"
+                  ? "Visible on your public profile"
+                  : "Shared with applications only"}
               </p>{/if}
           </section>{/if}
-        {#if !public_preview || !$profile.contact_private}<section
+        {#if shows("contact_visibility")}<section
             class="profile_side_card contact_card"
           >
             <div class="side_card_heading">
@@ -944,9 +977,9 @@
             <p><Icon name="mail" size={15} />{$profile.email}</p>
             <p>{$profile.phone || "Phone not added"}</p>
             <span
-              >{$profile.contact_private
-                ? "Contact details are private."
-                : "Contact details are visible on the public preview."}</span
+              >{$profile.contact_visibility === "all"
+                ? "Contact details are visible on the public preview."
+                : "Shared only with recruiters of jobs you apply to."}</span
             >
           </section>
           <div class="profile_quiet_note">
@@ -1060,11 +1093,6 @@
                 >Hybrid</option
               ><option>On-site</option><option>Open to all arrangements</option
               ></select
-            ></label
-          ><label class="field_label full_width"
-            >Notice period<select class="field_input" bind:value={draft.notice}
-              >{#each notice_periods as notice}<option>{notice}</option
-                >{/each}</select
             ></label
           ><Profile_fields bind:draft section="preferences" />{/if}
       </div>

@@ -21,9 +21,12 @@
   import { search_filters, viewing_currency, toast } from "$lib/portal/state";
   import {
     platform_metrics,
+    metric_value,
     landing_faqs,
     preview_topics,
   } from "$lib/portal/landing_content";
+  // Platform counters from GET /stats (null when the backend couldn't be reached).
+  export let data;
   import "$lib/portal/landing.css";
 
   let advanced = default_filters();
@@ -324,7 +327,7 @@
         </div>
       </div>
     </section>
-    <section class="reach_section" id="global-reach">
+    {#if data.stats}<section class="reach_section" id="global-reach">
       <div class="landing_container reach_layout">
         <div class="reach_intro">
           <span class="section_kicker">04 / A BIGGER WORLD OF WORK</span>
@@ -333,7 +336,9 @@
             Talent doesn’t have a postcode.<br />Neither should opportunity.
           </p>
           <span class="metrics_note"
-            >Illustrative platform figures<br />Planned daily updates</span
+            >Updated daily{#if data.stats.computed_at}<br />As of {new Date(
+                data.stats.computed_at,
+              ).toLocaleDateString("en", { dateStyle: "medium" })}{/if}</span
           ><svg
             class="reach_globe"
             width="130"
@@ -350,14 +355,13 @@
         </div>
         <div class="reach_grid">
           {#each platform_metrics as metric}<article>
-              <strong>{metric.value}</strong>
+              <strong>{metric_value(data.stats[metric.key])}</strong>
               <h3>{metric.label}</h3>
               <p>{metric.detail}</p>
-              <span>{metric.note}</span>
             </article>{/each}
         </div>
       </div>
-    </section>
+    </section>{/if}
     <section class="opportunities_section landing_container" id="opportunities">
       <div class="landing_section_heading">
         <div>

@@ -11,5 +11,8 @@ export const { GET, POST, PUT, PATCH, DELETE } = make_proxy('companies', [
     { pattern: new RegExp(`^${slug}/members$`), methods: ['GET'], query: ['status'] },
     { pattern: new RegExp(`^${slug}/members/${uuid}/(approve|reject|offboard)$`), methods: ['POST'] },
     { pattern: new RegExp(`^${slug}/members/${uuid}$`), methods: ['PATCH'] },
+    { pattern: new RegExp(`^${slug}/members/${uuid}/allowance$`), methods: ['PUT'] },
+    { pattern: new RegExp(`^${slug}/wallet$`), methods: ['GET'], query: ['page', 'page_size'] },
+    { pattern: new RegExp(`^${slug}/wallet/topups$`), methods: ['POST'] },
     { pattern: new RegExp(`^${slug}/leave$`), methods: ['POST'] }
 ]);

@@ -3,9 +3,11 @@
   import { focus_feedback } from "$lib/portal/focus_feedback.js";
   import { jobs_api } from "$lib/portal/jobs_api.js";
   import { my_skill_ids } from "$lib/portal/my_skills.js";
-  import { load_quota } from "$lib/portal/membership_state.js";
+  import { load_quota, server_quota } from "$lib/portal/membership_state.js";
+  import { rupees, request_topup } from "$lib/portal/payments.js";
   import Heading from "$lib/portal/page_heading.svelte";
   import Empty from "$lib/portal/empty_state.svelte";
+  import Modal from "$lib/portal/modal.svelte";
   export let data;
   // Manual: Easy Apply sends the profile itself (no form to retype). The
   // server snapshots it with the privacy rules applied and computes the match.
@@ -28,7 +30,7 @@
     ["Experience", `${p.experience_years || 0} years`],
     ["Notice period", p.notice || "Not set"],
     ["Expected salary", money(p.expected_salary)],
-    ["Current salary", p.current_salary_private ? "Kept private (not shared)" : money(p.current_salary)],
+    ["Current salary", p.current_salary_visibility === "hidden" ? "Hidden from all (not shared)" : money(p.current_salary)],
     ["Skills", p.skills.length ? p.skills.join(", ") : "None yet"],
   ];
   let consent = false;
@@ -36,12 +38,41 @@
   let error = "";
   let needs_profile = false;
   let done = null;
-  async function submit() {
+  // Manual: past the free daily applications each one costs the apply fee
+  // from the wallet, after an explicit confirmation; too little balance opens
+  // the top-up modal instead.
+  $: quota = $server_quota ?? data.quota;
+  let paid_prompt = null; // { fee_paise, balance_paise } while the confirm modal is open
+  function top_up(fee_paise, balance_paise) {
+    request_topup({
+      alert: `Applying for this role needs ${rupees(fee_paise)}; your wallet has ${rupees(balance_paise)}. Top up to continue.`,
+      need_paise: fee_paise - balance_paise,
+    });
+  }
+  function ask_to_pay(fee_paise, balance_paise) {
+    if (balance_paise < fee_paise) top_up(fee_paise, balance_paise);
+    else paid_prompt = { fee_paise, balance_paise };
+  }
+  function submit() {
     if (!consent || busy) return;
+    if (quota && quota.remaining === 0 && quota.apply_fee_paise > 0)
+      return ask_to_pay(quota.apply_fee_paise, quota.wallet_paise);
+    send(false);
+  }
+  async function send(confirm_paid) {
+    paid_prompt = null;
     busy = true;
     error = "";
-    const result = await jobs_api.apply(job.id);
+    const result = await jobs_api.apply(job.id, confirm_paid);
     busy = false;
+    if (result.status === 402 && result.data) {
+      // The quota or the balance changed since the page loaded.
+      load_quota();
+      const { reason, fee_paise, balance_paise } = result.data;
+      if (reason === "confirm_paid") ask_to_pay(fee_paise, balance_paise);
+      else top_up(fee_paise, balance_paise);
+      return;
+    }
     if (!result.ok) {
       error = result.error;
       needs_profile = result.status === 409 && !p.saved;
@@ -92,10 +123,12 @@
       <aside class="workspace_panel">
         <h2>{match}% skill match</h2>
         <p class="form_helper">The share of this role’s skills on your profile.</p>
-        {#if data.quota}<p>
-            {data.quota.remaining > 0
-              ? `Uses 1 of today’s free applications (${data.quota.remaining} of ${data.quota.limit} left).`
-              : `You’ve used today’s ${data.quota.limit} free applications. Paid applications arrive with the wallet; try again tomorrow.`}
+        {#if quota}<p>
+            {quota.remaining > 0
+              ? `Uses 1 of today’s free applications (${quota.remaining} of ${quota.limit} left).`
+              : quota.apply_fee_paise > 0
+                ? `You’ve used today’s ${quota.limit} free applications. This one costs ${rupees(quota.apply_fee_paise)} from your wallet (balance ${rupees(quota.wallet_paise)}).`
+                : `You’ve used today’s ${quota.limit} free applications.`}
           </p>{/if}
         {#if !p.saved}<p class="auth_alert" role="alert">
             Save your profile first so the hiring team has something to read.
@@ -110,9 +143,22 @@
           </p>{/if}
         <button
           class="button button_terracotta"
-          disabled={!consent || busy || !p.saved || data.quota?.remaining === 0}
+          disabled={!consent || busy || !p.saved}
           >{busy ? "Sending…" : "Send application"}</button
         >
       </aside>
     </form>{/if}
 </main>
+{#if paid_prompt}<Modal title="Use your wallet for this application?" on:close={() => (paid_prompt = null)}
+    ><p>
+      You have reached your daily limit of {quota?.limit ?? ""} free applications. Applying for
+      this role requires {rupees(paid_prompt.fee_paise)} from your wallet balance
+      ({rupees(paid_prompt.balance_paise)}).
+    </p>
+    <div class="form_actions">
+      <button class="button button_outline" on:click={() => (paid_prompt = null)}>Not now</button
+      ><button class="button button_dark" on:click={() => send(true)}
+        >Confirm & spend {rupees(paid_prompt.fee_paise)}</button
+      >
+    </div></Modal
+  >{/if}

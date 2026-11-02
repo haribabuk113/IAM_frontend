@@ -228,6 +228,67 @@ test("company verification goes to the company's member requests", async () => {
   assert.equal((await api("/me/experiences/x/verification", { method: "POST", cookie: asha.cookie })).status, 404, "proxy allowlist");
 });
 
+test("editing a verified experience sends it back for review without ending the membership", async () => {
+  // The company approves (the admin's approve route, done in SQL here).
+  sql(`UPDATE company_members SET status = 'current' WHERE company_id = 'forma' AND user_id = '${asha.user}';
+       UPDATE profile_experiences SET verification = 'verified' WHERE company_id = 'forma' AND user_id = '${asha.user}';`);
+  let current = to_store((await api("/me", { cookie: asha.cookie })).json.data);
+  assert.equal(current.experiences[0].verification, "Verified");
+
+  // Saving it unchanged keeps the tick; editing it puts it back in the queue.
+  let res = await save(asha, current);
+  assert.equal(res.json.data.experiences[0].verification, "Verified");
+  current.experiences[0].description = "Design systems and research ops.";
+  res = await save(asha, current);
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.equal(res.json.data.experiences[0].verification, "Pending");
+  assert.equal(sql(`SELECT status FROM company_members WHERE company_id = 'forma' AND user_id = '${asha.user}'`), "current");
+
+  // Pending already: asking again changes nothing.
+  const again = await api("/me/experiences/0/verification", { method: "POST", cookie: asha.cookie });
+  assert.equal(again.json.data.experiences[0].verification, "Pending");
+});
+
+test("privacy, salary period, availability and travel round-trip and shape the public view", async () => {
+  const current = to_store((await api("/me", { cookie: asha.cookie })).json.data);
+  const res = await save(asha, {
+    ...current,
+    visible: true,
+    expected_salary_visibility: "all",
+    current_salary_visibility: "applied",
+    contact_visibility: "applied",
+    expected_salary_period: "month",
+    availability: "Available from date",
+    available_from: "2027-01-15",
+    last_working_date: "2026-12-01", // dropped: not serving notice
+    notice_unit: "weeks",
+    notice_value: 6,
+    travel: "Up to 25%",
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  const p = res.json.data;
+  assert.equal(p.expected_salary_period, "month");
+  assert.equal(p.available_from, "2027-01-15");
+  assert.equal(p.last_working_date, "");
+  assert.equal(p.notice, "45 days", "6 weeks lands in the 45-day filter bucket");
+  assert.equal(p.travel, "Up to 25%");
+  assert.equal(to_store(p).expected, "$120,000 / month");
+  // Recruiters filter on a yearly INR figure.
+  const inr = Number(sql(`SELECT expected_salary_inr / (120000 * 12) FROM profiles WHERE user_id = '${asha.user}'`));
+  assert.equal(Number(sql(`SELECT rate_to_inr FROM exchange_rates WHERE currency = 'USD'`)).toFixed(4), inr.toFixed(4));
+
+  const pub = (await http(`/api/v1/profiles/asha-${tag}`, { base: BACKEND })).json.data;
+  assert.equal(pub.expected_salary, 120000, "visible to all");
+  assert.equal(pub.current_salary, 0, "applied jobs only");
+  assert.equal(pub.email, "", "applied jobs only");
+
+  const bad = await save(asha, { ...current, contact_visibility: "hidden" });
+  assert.equal(bad.status, 400, "contact can't be hidden from all");
+  assert.match(bad.json.error, /contact_visibility/);
+  // Leave the private defaults for the tests that follow.
+  assert.equal((await save(asha, current)).status, 200);
+});
+
 test("photo upload: real images only, served from /files", async () => {
   // 1x1 PNG.
   const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="), (c) => c.charCodeAt(0));
@@ -265,7 +326,7 @@ test("public profile hides private details; private profiles are 404", async () 
   assert.equal(p.name, "asha Tester");
 
   const current = to_store((await api("/me", { cookie: asha.cookie })).json.data);
-  await save(asha, { ...current, contact_private: false, visible: true });
+  await save(asha, { ...current, contact_visibility: "all", visible: true });
   assert.equal((await http(`/api/v1/profiles/${slug}`, { base: BACKEND })).json.data.email, "asha@example.com");
   await save(asha, { ...current, visible: false });
   assert.equal((await http(`/api/v1/profiles/${slug}`, { base: BACKEND })).status, 404);

@@ -28,6 +28,7 @@ export const profile_api = {
   save: (store) => call("/me", { method: "PUT", body: to_document(store) }),
   // data_url: the cropped photo (data:image/jpeg;base64,...)
   upload_photo: async (data_url) => call("/me/photo", { method: "PUT", image: await (await fetch(data_url)).blob() }),
+  remove_photo: () => call("/me/photo", { method: "DELETE" }),
   request_verification: (index) => call(`/me/experiences/${index}/verification`, { method: "POST" }),
   // Skill sync and the job page's one-click chips (see my_skills.js).
   skills: (signature) => call(`/me/skills?signature=${encodeURIComponent(signature)}`),
@@ -47,9 +48,21 @@ export function to_store(doc) {
     roles: doc.target_roles.join(", "),
     expected: doc.expected_salary
       ? new Intl.NumberFormat("en", { style: "currency", currency: doc.salary_currency, maximumFractionDigits: 0 })
-          .format(doc.expected_salary) + " / year"
+          .format(doc.expected_salary) + ` / ${doc.expected_salary_period || "year"}`
       : "",
   };
+}
+
+/** When the candidate can start: availability with its date, then the notice period. */
+export function availability_text(p) {
+  if (p.availability === "Serving notice")
+    return p.last_working_date ? `Serving notice · last working day ${p.last_working_date}` : "Serving notice";
+  if (p.availability === "Available from date")
+    return p.available_from ? `Available from ${p.available_from}` : "Available from a later date";
+  const notice = p.notice_unit
+    ? `${p.notice_value} ${p.notice_value === 1 ? p.notice_unit.slice(0, -1) : p.notice_unit} notice`
+    : p.notice;
+  return [p.availability, notice].filter(Boolean).join(" · ") || "Not specified";
 }
 
 /** Store -> the document PUT /profile/me takes (read-only and display fields dropped). */
@@ -61,6 +74,7 @@ export function to_document(store) {
     current_salary: amount(doc.current_salary),
     expected_salary: amount(doc.expected_salary),
     hourly_rate: amount(doc.hourly_rate),
+    notice_value: Math.round(amount(doc.notice_value)),
     skill_groups: doc.skill_groups?.length ? doc.skill_groups : skills?.length ? [{ name: "Core skills", skills }] : [],
   };
 }

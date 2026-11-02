@@ -1,6 +1,12 @@
 <script>
   import Location_picker from "./location_picker.svelte";
-  import { work_types, relocation_options } from "./filter_options.js";
+  import {
+    work_types,
+    relocation_options,
+    availability_options,
+    travel_options,
+    salary_periods,
+  } from "./filter_options.js";
   export let draft;
   export let section;
   function toggle(key, value) {
@@ -118,7 +124,7 @@
         ></label
       >
       <label class="field_label"
-        >Current annual salary<input
+        >Current salary<input
           class="field_input"
           type="number"
           min="0"
@@ -128,7 +134,15 @@
         /></label
       >
       <label class="field_label"
-        >Minimum expected annual salary<input
+        >Current salary is paid per<select
+          class="field_input"
+          bind:value={draft.current_salary_period}
+          >{#each salary_periods as period}<option value={period}>{period}</option
+            >{/each}</select
+        ></label
+      >
+      <label class="field_label"
+        >Minimum expected salary<input
           class="field_input"
           type="number"
           min="0"
@@ -137,6 +151,14 @@
           required
           bind:value={draft.expected_salary}
         /></label
+      >
+      <label class="field_label"
+        >Expected salary is per<select
+          class="field_input"
+          bind:value={draft.expected_salary_period}
+          >{#each salary_periods as period}<option value={period}>{period}</option
+            >{/each}</select
+        ></label
       >
       <label class="field_label"
         >Hourly rate for gigs · optional<input
@@ -149,18 +171,55 @@
         /></label
       >
     </div>
-    <label class="profile_field_check"
-      ><input type="checkbox" bind:checked={draft.is_serving_notice} />I’m
-      serving my notice period</label
-    >
-    {#if draft.is_serving_notice}<label class="field_label"
-        >Last working date<input
+    <h3>Availability</h3>
+    <div class="form_grid">
+      <label class="field_label"
+        >Availability<select class="field_input" bind:value={draft.availability}
+          ><option value="">Not specified</option
+          >{#each availability_options as option}<option>{option}</option
+            >{/each}</select
+        ></label
+      >
+      {#if draft.availability === "Serving notice"}<label class="field_label"
+          >Last working date<input
+            class="field_input"
+            type="date"
+            required
+            bind:value={draft.last_working_date}
+          /></label
+        >{:else if draft.availability === "Available from date"}<label
+          class="field_label"
+          >Available from<input
+            class="field_input"
+            type="date"
+            required
+            bind:value={draft.available_from}
+          /></label
+        >{/if}
+      <label class="field_label"
+        >Notice period<input
           class="field_input"
-          type="date"
-          required
-          bind:value={draft.last_working_date}
+          type="number"
+          min="0"
+          max="365"
+          step="1"
+          bind:value={draft.notice_value}
         /></label
-      >{/if}
+      >
+      <label class="field_label"
+        >Notice unit<select class="field_input" bind:value={draft.notice_unit}
+          ><option value="days">Days</option><option value="weeks">Weeks</option
+          ><option value="months">Months</option></select
+        ></label
+      >
+      <label class="field_label"
+        >Travel<select class="field_input" bind:value={draft.travel}
+          ><option value="">No preference</option
+          >{#each travel_options as option}<option>{option}</option
+            >{/each}</select
+        ></label
+      >
+    </div>
     <fieldset>
       <legend>Preferred employment types</legend>
       <div class="profile_choice_grid">

@@ -37,7 +37,9 @@ export const jobs_api = {
   delete_draft: (id) => call(`/framework_api/recruiter/drafts/${enc(id)}`, { method: "DELETE" }),
   // Applications: Easy Apply (uses a free application), "Yes, I applied" for
   // external jobs, your list and today's quota; recruiters' applicant pipeline.
-  apply: (job_id) => call("/framework_api/applications", { method: "POST", body: { job_id } }),
+  // confirm_paid: the candidate agreed to pay the fee once today's free applications are used.
+  apply: (job_id, confirm_paid = false) =>
+    call("/framework_api/applications", { method: "POST", body: { job_id, confirm_paid } }),
   apply_external: (job_id) => call("/framework_api/applications/external", { method: "POST", body: { job_id } }),
   my_applications: () => call("/framework_api/applications"),
   quota: () => call("/framework_api/applications/quota"),
@@ -86,7 +88,7 @@ export function to_card(job, label = (id) => id) {
  * "Filters": one request when the user presses Search). Salaries convert to
  * the INR baseline with the published rates; skill names map to term ids.
  */
-export function to_criteria(filters, { rates, skill_ids = {}, designation_ids = {}, saved = [], page = 1, page_size = 20 }) {
+export function to_criteria(filters, { rates, skill_ids = {}, designation_ids = {}, saved = [], page = 1, page_size = 20, unlock_id = "" }) {
   const number = (v) => (v === "" || v == null ? null : Number(v));
   return {
     query: filters.query,
@@ -115,7 +117,9 @@ export function to_criteria(filters, { rates, skill_ids = {}, designation_ids = 
     interview_rounds: number(filters.rounds),
     interview_rounds_exact: filters.round_match === "exact",
     posted_within_days: filters.posted_within,
-    sort: ["newest", "salary", "title"].includes(filters.sort) ? filters.sort : "newest",
+    // Match-score sorting is bought per set of filters (POST /jobs/search/unlocks).
+    sort: filters.sort === "match" && unlock_id ? "match" : ["newest", "salary", "title"].includes(filters.sort) ? filters.sort : "newest",
+    unlock_id: filters.sort === "match" ? unlock_id : "",
     page,
     page_size,
   };
