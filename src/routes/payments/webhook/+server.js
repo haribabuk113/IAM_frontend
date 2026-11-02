@@ -1,4 +1,5 @@
 import { backend_url } from '$lib/server/backend_api.js';
+import { client_headers } from '$lib/server/request_context.js';
 
 // Razorpay's webhook. The backend isn't public, so this passes the call
 // through: the raw body bytes and X-Razorpay-Signature unchanged, because the
@@ -12,6 +13,7 @@ export async function POST({ request }) {
         const response = await fetch(backend_url('/payments/webhook'), {
             method: 'POST',
             headers: {
+                ...client_headers(),
                 'Content-Type': 'application/json',
                 'X-Razorpay-Signature': request.headers.get('x-razorpay-signature') ?? ''
             },

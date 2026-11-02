@@ -3,6 +3,7 @@
   import Profile_journey from "$lib/portal/profile_journey.svelte";
   import Social_icon from "$lib/portal/social_icon.svelte";
   import Posting_analytics from "$lib/portal/posting_analytics.svelte";
+  import Profile_activity from "$lib/portal/profile_activity.svelte";
   import {
     membership_open,
     premium_active,
@@ -70,6 +71,7 @@
   import { sync_my_skills } from "$lib/portal/my_skills.js";
   import { designations as designation_terms } from "$lib/portal/reference.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
+  import Delete_account from "$lib/portal/delete_account.svelte";
   import { visibility_labels } from "$lib/portal/filter_options.js";
   import { location_label, rates } from "$lib/portal/reference.js";
   import Icon from "$lib/portal/icon.svelte";
@@ -80,15 +82,6 @@
   export let data;
   // The server's copy is the truth; the store feeds the profile components.
   $: profile.set(to_store(data.profile));
-  const weekly_views = [5, 7, 8, 6, 9, 12, 15];
-  const weekly_resume_views = [2, 1, 2, 3, 1, 4, 5];
-  const weekly_downloads = [0, 1, 1, 0, 2, 1, 1];
-  const week_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  function chart_points(values) {
-    return values
-      .map((value, index) => `${30 + index * 96},${145 - value * 8}`)
-      .join(" ");
-  }
   let editing = "";
   let resume_url = "";
   let draft = to_store(data.profile);
@@ -130,7 +123,7 @@
     },
   ];
   $: current_tab = data.visitor
-    ? "overview"
+    ? $page.url.searchParams.get("tab") === "activity" ? "activity" : "overview"
     : ["overview", "activity", "preferences", "jobs"].includes(
     $page.url.searchParams.get("tab") ?? "",
   )
@@ -152,7 +145,7 @@
     $profile.skills.length,
   ].filter(Boolean).length;
   // Visitors (/profiles/[slug]) get the read-only view the owner previews
-  // with ?public=1, minus the owner-only sample insights and résumé preview.
+  // with ?public=1, minus the owner-only posting analytics and résumé preview.
   $: visitor = !!data.visitor;
   $: public_preview = visitor || $page.url.searchParams.get("public") === "1";
   $: tab_href = (tab) => {
@@ -374,10 +367,10 @@
         <div class="profile_identity_main">
           <div class="profile_name_row">
             <h2>{$profile.name}</h2>
-            {#if !visitor}<a
+            {#if data.analytics}<a
               class="profile_mini_analytics"
               href={tab_href("activity")}
-              ><strong>62 <span>views this week</span></strong><svg
+              ><strong>{data.analytics.totals.profile_views} <span>views in the last 7 days</span></strong><svg
                 viewBox="0 0 80 24"
                 aria-hidden="true"
                 ><path
@@ -386,7 +379,7 @@
                   stroke="currentColor"
                   stroke-width="2"
                 /></svg
-              ><small>Sample insights</small></a
+              ><small>Updated daily</small></a
             >{/if}
           </div>
           <p class="profile_title">
@@ -439,9 +432,9 @@
       <div class="profile_navigation">
         <nav aria-label="Profile sections">
           <a href={tab_href("overview")} class:active={current_tab === "overview"}>Overview</a
-          >{#if !visitor}<a href={tab_href("activity")} class:active={current_tab === "activity"}
+          ><a href={tab_href("activity")} class:active={current_tab === "activity"}
               >Activity & insights <span class="tab_dot"></span></a
-            ><a href={tab_href("jobs")} class:active={current_tab === "jobs"}
+            >{#if !visitor}<a href={tab_href("jobs")} class:active={current_tab === "jobs"}
               >{public_preview ? "Jobs posted" : "Jobs posted by me"}</a
             >{/if}{#if !public_preview}<a
               href="/profile?tab=preferences"
@@ -564,7 +557,7 @@
                 </a>{:else}<p>No active jobs to show.</p>{/each}
             </div>
           </section>
-        {:else if current_tab === "activity"}<div class="analytics_tabs">
+        {:else if current_tab === "activity"}{#if !public_preview}<div class="analytics_tabs">
             <button
               class:active={analytics_tab === "profile"}
               on:click={() => (analytics_tab = "profile")}
@@ -573,78 +566,9 @@
               class:active={analytics_tab === "jobs"}
               on:click={() => (analytics_tab = "jobs")}>Job posting</button
             >
-          </div>
-          {#if analytics_tab === "jobs"}<Posting_analytics />{:else}
-            <section class="profile_section">
-              <div class="profile_section_heading">
-                <h2>Your story is finding its people.</h2>
-                <span class="section_label">SAMPLE INSIGHTS</span>
-              </div>
-              <div class="profile_stats">
-                <div>
-                  <Icon name="eye" size={19} /><strong>62</strong><span
-                    >Profile views</span
-                  ><small>+18% this week</small>
-                </div>
-                <div>
-                  <Icon name="file" size={19} /><strong>18</strong><span
-                    >Résumé views</span
-                  ><small>+8% this week</small>
-                </div>
-                <div>
-                  <Icon name="briefcase" size={19} /><strong>6</strong><span
-                    >Résumé downloads</span
-                  ><small>Illustrative weekly total</small>
-                </div>
-              </div>
-              <div class="profile_chart">
-                <div>
-                  <strong>A little more visible, every week.</strong><span
-                    >Illustrative engagement</span
-                  >
-                </div>
-                <svg
-                  viewBox="0 0 640 170"
-                  role="img"
-                  aria-label="Illustrative seven-day engagement: 62 profile views, 18 résumé views and 6 downloads"
-                  ><path
-                    d="M30 25h576M30 65h576M30 105h576M30 145h576"
-                    stroke="#dce1ef"
-                    stroke-dasharray="3 4"
-                  />{#each [{ values: weekly_views, color: "#3155ef" }, { values: weekly_resume_views, color: "#55734a" }, { values: weekly_downloads, color: "#ac603a" }] as series}<polyline
-                      points={chart_points(series.values)}
-                      fill="none"
-                      stroke={series.color}
-                      stroke-width="2.5"
-                    />{/each}<g font-size="10" fill="currentColor"
-                    >{#each week_days as day, index}<text
-                        x={22 + index * 96}
-                        y="168">{day}</text
-                      >{/each}</g
-                  ></svg
-                >
-                <p class="small_text">
-                  Blue: profile views · Green: résumé views · Copper: downloads
-                </p>
-                <details>
-                  <summary class="small_text">View chart data</summary>
-                  <table class="weekly_analytics_table">
-                    <thead
-                      ><tr
-                        ><th>Day</th><th>Profile views</th><th>Résumé views</th
-                        ><th>Downloads</th></tr
-                      ></thead
-                    ><tbody
-                      >{#each week_days as day, index}<tr
-                          ><td>{day}</td><td>{weekly_views[index]}</td><td
-                            >{weekly_resume_views[index]}</td
-                          ><td>{weekly_downloads[index]}</td></tr
-                        >{/each}</tbody
-                    >
-                  </table>
-                </details>
-              </div>
-            </section>
+          </div>{/if}
+          {#if analytics_tab === "jobs" && !public_preview}<Posting_analytics />{:else}
+            <Profile_activity analytics={data.analytics} />
             {#if !public_preview}<section class="profile_section">
                 <div class="profile_section_heading">
                   <h2>The doors you’ve opened</h2>
@@ -765,6 +689,7 @@
                 everyone who opens your public profile link.</span
               >
             </div>
+            <Delete_account />
           </section>
         {/if}
       </div>

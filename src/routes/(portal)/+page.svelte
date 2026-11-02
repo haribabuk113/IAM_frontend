@@ -42,6 +42,13 @@
   // A few real teams from the company directory (first page of search).
   let featured_companies = [];
   on_mount(async () => {
+    // Arriving from account deletion (/auth/account): say it worked, then tidy the URL.
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("account_deleted")) {
+      toast("Your Referise account was deleted. You’ve been signed out everywhere.");
+      url.searchParams.delete("account_deleted");
+      history.replaceState(history.state, "", url);
+    }
     const result = await companies_api.search({ page: 1, page_size: 3 });
     if (result.ok) featured_companies = result.data.companies;
   });

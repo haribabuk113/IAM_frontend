@@ -326,3 +326,22 @@ test("landing counters come from the stats API, shown rounded down", async () =>
   for (const [n, want] of [[0, "0"], [9, "9"], [999, "999"], [1000, "1K+"], [1290, "1.2K+"], [25400, "25K+"], [100000, "100K+"], [3456789, "3.4M+"], [null, "0"]])
     assert.equal(metric_value(n), want, `metric_value(${n})`);
 });
+
+test("after the consent page, only same-site paths are followed", async () => {
+  const { safe_next, consent_open_paths } = await import("../src/lib/portal/legal_documents.js");
+  assert.equal(safe_next("/jobs?q=1"), "/jobs?q=1");
+  for (const bad of ["//evil.com", "/" + String.fromCharCode(92) + "evil.com", "https://evil.com", "", null, undefined])
+    assert.equal(safe_next(bad), "/", String(bad));
+  assert.deepEqual(consent_open_paths, ["/consent", "/terms", "/privacy", "/cookies"]);
+});
+
+test("backend calls forward the real client's IP and User-Agent, only inside a request", async () => {
+  const { run_with_request, client_headers } = await import("../src/lib/server/request_context.js");
+  assert.deepEqual(client_headers(), {}, "outside a request (e.g. a scheduled call) nothing is added");
+  const inside = await run_with_request({ ip: "203.0.113.7", user_agent: "Mozilla/5.0" }, async () => {
+    await new Promise((r) => setTimeout(r, 5)); // survives awaits, as in a load function
+    return client_headers();
+  });
+  assert.deepEqual(inside, { "X-Forwarded-For": "203.0.113.7", "User-Agent": "Mozilla/5.0" });
+  assert.deepEqual(await run_with_request({ ip: "", user_agent: "" }, async () => client_headers()), {});
+});

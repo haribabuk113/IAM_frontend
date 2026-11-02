@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { client_headers } from './request_context.js';
 
 // The findJobs backend owns the session: it redeems IAM's login code, keeps
 // the IAM tokens server-side and hands back only an opaque session ID.
@@ -9,7 +10,7 @@ const base_url = api_base + '/auth';
 export const backend_url = (path) => api_base + path;
 
 async function backend_request(path, { method = 'GET', session_id = null, body } = {}) {
-    const headers = {};
+    const headers = client_headers();
     if (session_id) headers.Cookie = 'jp_session=' + session_id;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     try {
@@ -54,7 +55,7 @@ export async function iam_access_token(session_id) {
 // adds request headers (e.g. Idempotency-Key). Returns { ok, status, data,
 // error } with the envelope unwrapped.
 export async function api_request(path, { method = 'GET', session_id = null, body, raw, headers: extra = {} } = {}) {
-    const headers = { ...extra };
+    const headers = { ...client_headers(), ...extra };
     if (session_id) headers.Cookie = 'jp_session=' + session_id;
     let payload;
     if (raw) {

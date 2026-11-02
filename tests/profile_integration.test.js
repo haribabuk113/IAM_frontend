@@ -28,16 +28,36 @@ function plant(name) {
   const user = sql(`INSERT INTO users (iam_user_id, email, name) VALUES ('it-profile-${name}-${tag}', '${name}@example.com', '${name} Tester') RETURNING id;`);
   const session = sql(`INSERT INTO sessions (user_id, expires_at, access_expires_at, refresh_token_enc, access_token_enc, key_id)
     VALUES ('${user}', now() + interval '1 hour', now() + interval '1 hour', '\\x00', '\\x00', 'it') RETURNING id;`);
+  planted.push(user);
+  accept(user);
   return { user, cookie: `jp_session=${session}` };
 }
 
+// The consent gate: planted users accept the backend's current documents
+// (read once in before()), so these tests reach the profile routes.
+const planted = [];
+let documents = [];
+function accept(user) {
+  for (const d of documents)
+    sql(`INSERT INTO consents (user_id, ecosystem_id, doc_id, doc_version, status)
+      SELECT id, iam_user_id, '${d.doc_id}', '${d.version}', 'accepted' FROM users WHERE id = '${user}';`);
+}
+
 let asha, ravi;
-before(() => {
+before(async () => {
   asha = plant("asha");
   ravi = plant("ravi");
+  const required = await (await fetch(`${BACKEND}/api/v1/consents/required`, { headers: { cookie: asha.cookie } })).json();
+  documents = required.data ?? [];
+  for (const who of [asha, ravi]) accept(who.user);
 });
 after(() => {
-  sql(`DELETE FROM users WHERE iam_user_id LIKE 'it-profile-%-${tag}';
+  const ids = planted.map((id) => `'${id}'`).join(",");
+  sql(`SET session_replication_role = replica;
+       DELETE FROM consents WHERE user_id IN (${ids});
+       DELETE FROM account_events WHERE user_id IN (${ids});
+       SET session_replication_role = DEFAULT;
+       DELETE FROM users WHERE iam_user_id LIKE 'it-profile-%-${tag}';
        DELETE FROM skills WHERE name LIKE '%zz${tag}';
        DELETE FROM designations WHERE name LIKE '%zz${tag}';`);
 });

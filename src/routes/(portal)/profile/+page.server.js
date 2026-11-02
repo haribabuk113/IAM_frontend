@@ -16,8 +16,13 @@ export async function load({ cookies }) {
   ]);
   if (result.status === 401) redirect(303, to_login);
   if (!result.ok) error(502, "Your profile is unavailable right now.");
+  // The public Activity tab's numbers (a saved, public profile only; null otherwise).
+  const analytics = result.data.saved && result.data.visible
+    ? await api_request(`/profiles/${result.data.slug}/analytics`)
+    : null;
   return {
     profile: result.data,
+    analytics: analytics?.ok ? analytics.data : null,
     posted_jobs: posted.ok ? posted.data : [],
     applications: applications.ok ? applications.data : [],
   };

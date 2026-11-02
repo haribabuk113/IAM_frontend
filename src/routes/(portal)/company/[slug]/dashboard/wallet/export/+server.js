@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { backend_url } from '$lib/server/backend_api.js';
+import { client_headers } from '$lib/server/request_context.js';
 import { read_session_id } from '$lib/server/session_cookie.js';
 
 // Company wallet CSV download ("View Full Transaction History"). The backend
@@ -10,7 +11,7 @@ export async function GET({ params, cookies }) {
     let response;
     try {
         response = await fetch(backend_url(`/companies/${encodeURIComponent(params.slug)}/wallet?format=csv`), {
-            headers: { Cookie: 'jp_session=' + session_id },
+            headers: { ...client_headers(), Cookie: 'jp_session=' + session_id },
             signal: AbortSignal.timeout(30000)
         });
     } catch {

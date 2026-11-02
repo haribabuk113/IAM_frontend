@@ -36,7 +36,8 @@
     <nav class="compact_footer_links" aria-label="Footer">
       <a href="/about">About us</a><a href="/faq">FAQ</a><a href="/contact"
         >Contact us</a
-      ><a href="/terms">Terms & conditions</a><a href="/privacy">Privacy</a>
+      ><a href="/terms">Terms & conditions</a><a href="/privacy">Privacy</a
+      ><a href="/cookies">Cookie policy</a>
     </nav>
     <div class="footer_bottom">
       <span>© {new Date().getFullYear()} Referise. A world of possibility.</span
