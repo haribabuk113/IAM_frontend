@@ -470,6 +470,12 @@
   color: #3155ef;
   font-size: 11px;
 }
+.job_match.high strong {
+  color: #28714e;
+  background: #e3f3ea;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 .job_match > span {
   color: #748098;
   font-size: 9px;

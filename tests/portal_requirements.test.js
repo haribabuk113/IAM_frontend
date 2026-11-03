@@ -158,6 +158,7 @@ test("hidden salary amounts never render or participate in client salary matchin
   };
   assert.equal(salary(hidden), "Competitive");
   assert.equal(converted_salary(hidden, "USD"), "Competitive");
+  assert.equal(converted_salary(hidden, "USD", undefined, "Matches your search parameters"), "Matches your search parameters");
   assert.equal(search({}, [hidden]).length, 1);
   assert.equal(search({ min_salary: 1 }, [hidden]).length, 0);
 });
@@ -267,8 +268,31 @@ test("profile migration keeps restricted fields private and rejects malformed ne
   assert.deepEqual(restored.social_links, []);
   assert.equal(restored.current_salary, default_profile.current_salary);
   assert.equal(restored.notice, "Immediate");
-  restored.experiences[0].title = "Changed";
-  assert.notEqual(default_profile.experiences[0].title, "Changed");
+  restored.experiences[0].roles[0].title = "Changed";
+  assert.notEqual(default_profile.experiences[0].roles[0].title, "Changed");
+  // Old flat experiences and proficiency languages don't pass the shape check.
+  const old = restore_profile(
+    {
+      experiences: [{ company: "Forma", title: "Designer", type: "Full-time", start: "2023-03", end: "", current: true, promoted: false, description: "", verification: "Unverified" }],
+      languages: [{ name: "English", proficiency: "Fluent" }],
+    },
+    default_profile,
+  );
+  assert.deepEqual(old.experiences, default_profile.experiences);
+  assert.deepEqual(old.languages, default_profile.languages);
+});
+test("profile validation keeps each role within its employment period", () => {
+  const p = structuredClone(default_profile);
+  assert.equal(profile_error(p), "");
+  p.experiences[1].roles[0].start = "2019-01"; // before joining Layers
+  assert.match(profile_error(p), /start within/);
+  p.experiences[1].roles[0].start = "2020-06";
+  p.experiences[1].roles[0].end = "2024-01"; // after leaving
+  assert.match(profile_error(p), /end within/);
+  p.experiences[1].roles[0].end = "";
+  assert.equal(profile_error(p), "", "a past record's open role ends with the record");
+  p.experiences[0].roles = [];
+  assert.match(profile_error(p), /at least one role/);
 });
 test("profile validation catches reserved handles, date inversions and missing availability", () => {
   assert.equal(profile_error(default_profile), "");

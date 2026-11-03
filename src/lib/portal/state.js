@@ -9,6 +9,7 @@ export const saved_jobs = writable([]);
 export const applications = writable([]);
 export const application_snapshots = writable([]);
 export const saved_searches = writable([]);
+export const recent_titles = writable([]); // last few job-title searches (manual "Search jobs" §2.1)
 export const profile = writable(structuredClone(default_profile));
 export const resume_file = writable(null);
 export const notification = writable("");
@@ -73,6 +74,9 @@ export function hydrate_preview() {
       ),
     );
   saved_searches.subscribe((next) => persist("searches", next));
+  const recent = read("recent_titles");
+  if (Array.isArray(recent)) recent_titles.set(recent.filter((t) => typeof t === "string").slice(0, 5));
+  recent_titles.subscribe((next) => persist("recent_titles", next));
   try {
     localStorage.removeItem("referise-preview:profile"); // profiles are stored on the server now
   } catch {}
@@ -104,6 +108,12 @@ export async function use_server_saved() {
   }
   persist("saved", []);
   from_server(list);
+}
+/** Re-reads the saved list (e.g. after a bulk apply marks some as applied). */
+export async function refresh_saved() {
+  if (!saved_on_server) return;
+  const result = await jobs_api.saved_jobs();
+  if (result.ok) from_server(result.data);
 }
 export function use_local_saved() {
   if (!saved_on_server) return;

@@ -17,7 +17,9 @@
   } from "$lib/portal/search.js";
   import Modal from "$lib/portal/modal.svelte";
   import { companies_api, image_url } from "$lib/portal/companies_api.js";
-  import { location_label } from "$lib/portal/reference.js";
+  import { location_label, location_tree } from "$lib/portal/reference.js";
+  import Location_select from "$lib/portal/location_select.svelte";
+  import { company_sizes } from "$lib/portal/filter_options.js";
   import { search_filters, viewing_currency, toast } from "$lib/portal/state";
   import {
     platform_metrics,
@@ -31,7 +33,8 @@
 
   let advanced = default_filters();
   let query = "";
-  let location = "";
+  // Company search (newer doc §5): name, country, city (HQ or office), industry, size.
+  let company = { country: "", city: "", industry: "", size: "" };
   let job_location = "";
   let work_mode = "";
   let search_type = "jobs";
@@ -56,7 +59,6 @@
   on_mount(() => {
     const previous = get(search_filters);
     query = previous.query;
-    location = previous.location;
     work_mode = previous.modes.length === 1 ? previous.modes[0] : "";
     advanced = { ...default_filters(), currency: previous.currency };
     const reduced_motion = window.matchMedia(
@@ -104,9 +106,10 @@
 
   function search() {
     if (search_type === "companies") {
-      goto(
-        `/companies?q=${encodeURIComponent(query.trim())}&location=${encodeURIComponent(location.trim())}`,
-      );
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      for (const [key, value] of Object.entries(company)) if (value.trim()) params.set(key, value.trim());
+      goto(`/companies${params.size ? `?${params}` : ""}`);
       return;
     }
     const remote = advanced.worldwide;
@@ -284,17 +287,12 @@
                 bind:worldwide={advanced.worldwide}
               />{:else}<label
                 ><Icon name="search" size={20} /><input
-                  aria-label="Company name or industry"
+                  aria-label="Company name"
                   bind:value={query}
-                  placeholder="Company name or industry"
+                  maxlength="100"
+                  placeholder="Company name"
                 /></label
-              ><label
-                ><Icon name="location" size={19} /><input
-                  aria-label="Company location"
-                  bind:value={location}
-                  placeholder="Company location"
-                /></label
-              >{/if}
+              ><Location_select label="City (HQ or office)" bind:value={company.city} />{/if}
             <button class="r_button blue" type="submit"
               >{search_type === "jobs"
                 ? "Find my next role"
@@ -305,7 +303,7 @@
             >
           </div>
           <div class="search_filters">
-            <span>How do you like to work?</span
+            <span>{search_type === "jobs" ? "How do you like to work?" : "Narrow it down"}</span
             >{#if search_type === "jobs"}<label
                 ><span class="sr_only">Workplace</span><select
                   aria-label="Workplace"
@@ -320,6 +318,24 @@
                   name="arrow-right"
                   size={14}
                 /></a
+              >{:else}<label
+                ><span class="sr_only">Country</span><select aria-label="Headquarters country" bind:value={company.country}
+                  ><option value="">Any country</option>{#each $location_tree as c (c.id)}<option value={c.country_code}
+                      >{c.name}</option
+                    >{/each}</select
+                ></label
+              ><label
+                ><span class="sr_only">Industry</span><input
+                  class="company_industry"
+                  aria-label="Industry"
+                  placeholder="Any industry"
+                  maxlength="25"
+                  bind:value={company.industry}
+                /></label
+              ><label
+                ><span class="sr_only">Company size</span><select aria-label="Company size" bind:value={company.size}
+                  ><option value="">Any size</option>{#each company_sizes as s}<option>{s}</option>{/each}</select
+                ></label
               >{/if}
           </div>
         </form>

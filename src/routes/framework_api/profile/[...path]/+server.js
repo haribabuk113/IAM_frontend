@@ -4,6 +4,7 @@ import { make_proxy } from '$lib/server/proxy.js';
 // call to the session's user).
 export const { GET, POST, PUT, PATCH, DELETE } = make_proxy('profile', [
     { pattern: /^me$/, methods: ['GET', 'PUT'] },
+    { pattern: /^me\/slug-availability$/, methods: ['GET'], query: ['slug'] },
     { pattern: /^me\/photo$/, methods: ['PUT', 'DELETE'], image: true },
     { pattern: /^me\/experiences\/[0-9]{1,2}\/verification$/, methods: ['POST'] },
     { pattern: /^me\/skills$/, methods: ['GET', 'POST'], query: ['signature'] },

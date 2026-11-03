@@ -74,3 +74,5 @@ export function leaves(nodes) {
     node.children ? leaves(node.children) : [node],
   );
 }
+// Company sizes, as the company API stores them (directory, form, landing).
+export const company_sizes = ["1–10 people", "11–50 people", "51–200 people", "201–500 people", "501–1,000 people", "1,001–5,000 people", "5,000+ people"];

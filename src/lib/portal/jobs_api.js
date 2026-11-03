@@ -41,6 +41,10 @@ export const jobs_api = {
   apply: (job_id, confirm_paid = false) =>
     call("/framework_api/applications", { method: "POST", body: { job_id, confirm_paid } }),
   apply_external: (job_id) => call("/framework_api/applications/external", { method: "POST", body: { job_id } }),
+  // Bulk apply (saved jobs): dry_run returns the free/paid split; the real run
+  // must echo the dry run's paid count. All or nothing.
+  apply_bulk: (job_ids, { dry_run = false, confirm_paid_count = 0 } = {}) =>
+    call("/framework_api/applications/bulk", { method: "POST", body: { job_ids, dry_run, confirm_paid_count } }),
   my_applications: () => call("/framework_api/applications"),
   quota: () => call("/framework_api/applications/quota"),
   applicants: (job_id, { stage = "", min_match = 0, sort = "recent" } = {}) =>

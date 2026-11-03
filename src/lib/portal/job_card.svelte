@@ -3,8 +3,6 @@
   import {
     saved_jobs,
     toggle_saved,
-    applications,
-    profile,
     viewing_currency,
     toast,
   } from "./state.js";
@@ -20,6 +18,8 @@
   export let href = "";
   export let currency = "";
   export let compact = false;
+  // From a search with a salary filter: a hidden salary passed it server-side.
+  export let salary_matched = false;
   let all_skills = false;
   let all_locations = false;
   let pending_skill = "";
@@ -30,42 +30,21 @@
       ? { ...get_company(job.company), name: job.company_name }
       : get_company(job.company);
   $: target_currency = currency || $viewing_currency;
-  // Signed in: the synced profile skills; signed out: the preview profile.
+  // The synced profile skills; signed out there's no profile, so no score.
   $: signed_in = !!$page.data.user;
-  $: my_names = signed_in ? $my_skill_names : $profile.skills;
+  $: my_names = signed_in ? $my_skill_names : [];
   $: match = skill_match(job, my_names);
   $: locations = [
     ...new Set((job.location_ids ?? job.locations ?? []).map($location_label)),
   ];
   $: owned = new Set(my_names.map((s) => s.toLowerCase()));
   async function add_skill() {
-    const id = job.skill_ids?.[job.skills.indexOf(pending_skill)];
-    if (signed_in && id) {
-      const skill = pending_skill;
-      pending_skill = "";
-      const error = await toggle_my_skill(id, skill);
-      toast(error || `${skill} added to your profile.`);
-      return;
-    }
-    profile.update((p) => {
-      const groups = structuredClone(p.skill_groups ?? []);
-      if (
-        groups.length &&
-        !groups.some((g) =>
-          g.skills.some((s) => s.toLowerCase() === pending_skill.toLowerCase()),
-        )
-      )
-        groups[0].skills.push(pending_skill);
-      return {
-        ...p,
-        skill_groups: groups,
-        skills: owned.has(pending_skill.toLowerCase())
-          ? p.skills
-          : [...p.skills, pending_skill],
-      };
-    });
-    toast(`${pending_skill} added to your preview profile.`);
+    const skill = pending_skill;
+    const id = job.skill_ids?.[job.skills.indexOf(skill)];
     pending_skill = "";
+    if (!id) return toast("Add this skill from your profile.");
+    const error = await toggle_my_skill(id, skill);
+    toast(error || `${skill} added to your profile.`);
   }
 </script>
 
@@ -118,14 +97,11 @@
       </p>{/if}
   </div>
   <div class="job_card_content">
-    <div class="job_match">
-      <strong>{match}% skill match</strong><span
-        title={signed_in
-          ? "The share of this job's skills on your profile."
-          : "Illustrative match: the share of job skills present in your preview profile."}
-        >{signed_in ? "Your profile" : "Preview profile"}</span
-      >
-    </div>
+    {#if signed_in}<div class="job_match" class:high={match >= 70}>
+        <strong>{match}% skill match</strong><span title="The share of this job's skills on your profile."
+          >Your profile</span
+        >
+      </div>{/if}
     <div class="matching_skills" class:expanded={all_skills}>
       {#each job.skills as skill}<button
           class:matched={owned.has(skill.toLowerCase())}
@@ -134,7 +110,8 @@
             ? `${skill}: already on your profile`
             : `Add ${skill} to your profile`}
           on:click={() => {
-            if (!owned.has(skill.toLowerCase())) pending_skill = skill;
+            if (!signed_in) toast("Sign in to add skills to your profile.");
+            else if (!owned.has(skill.toLowerCase())) pending_skill = skill;
             else toast(`${skill} is already on your profile.`);
           }}>{owned.has(skill.toLowerCase()) ? "✓" : "+"} {skill}</button
         >{/each}
@@ -149,7 +126,12 @@
       >{/if}
     <div class="job_card_bottom">
       <div>
-        <strong>{converted_salary(job, target_currency, $rates)}</strong><span
+        <strong>{converted_salary(
+            job,
+            target_currency,
+            $rates,
+            salary_matched ? "Matches your search parameters" : "Competitive",
+          )}</strong><span
           class="salary_note"
           >{target_currency !== job.currency && !job.salary_hidden
             ? `Posted: ${converted_salary(job, job.currency, $rates)}`
@@ -161,11 +143,7 @@
       >
     </div>
     <div class="job_card_foot">
-      <span
-        >{$applications.includes(job.id)
-          ? "Applied in preview"
-          : job.application}</span
-      ><span>{job.tier}</span>
+      <span>{job.application}</span><span>{job.tier}</span>
     </div>
   </div>
 </article>

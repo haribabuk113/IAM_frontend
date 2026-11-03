@@ -1,11 +1,11 @@
 <script>
-  import { goto, invalidateAll as invalidate_all } from "$app/navigation";
+  import { goto, invalidateAll as invalidate_all, afterNavigate as after_navigate } from "$app/navigation";
   import { page } from "$app/stores";
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
   import Company_logo from "$lib/portal/company_logo.svelte";
   import Modal from "$lib/portal/modal.svelte";
-  import { saved_jobs, toggle_saved, toast, viewing_currency } from "$lib/portal/state";
+  import { saved_jobs, toggle_saved, toast, viewing_currency, search_filters } from "$lib/portal/state";
   import { converted_salary } from "$lib/portal/currency.js";
   import { rates, location_label, currency_options } from "$lib/portal/reference.js";
   import { render_markdown } from "$lib/portal/markdown.js";
@@ -14,6 +14,12 @@
   import { image_url } from "$lib/portal/companies_api.js";
   import { my_skill_ids, toggle_my_skill } from "$lib/portal/my_skills.js";
   export let data;
+  // Manual "View jobs" §4.1: opened from a salary-filtered search, a hidden
+  // salary reads "Matches your search parameters"; otherwise "Competitive".
+  let from_salary_search = false;
+  after_navigate(({ from }) => {
+    from_salary_search = from?.url.pathname === "/jobs" && $search_filters.min_salary > 0;
+  });
   // Manual: required skills are one-click chips (red + adds, green − removes)
   // and the match score recalculates on the spot. Ids pair with job.skills.
   $: skill_ids = data.job.skill_ids ?? [];
@@ -161,7 +167,14 @@
       <div class="job_facts_strip">
         <div>
           <Icon name="money" size={20} /><span
-            >COMPENSATION<strong>{converted_salary(job, $viewing_currency, $rates)}</strong></span
+            >COMPENSATION<strong
+              >{converted_salary(
+                job,
+                $viewing_currency,
+                $rates,
+                from_salary_search ? "Matches your search parameters" : "Competitive",
+              )}</strong
+            ></span
           >
         </div>
         <div>
@@ -320,11 +333,11 @@
               ? `${data.recruiter.open_jobs} open ${data.recruiter.open_jobs === 1 ? "role" : "roles"} on Referise.`
               : "No other public roles right now."}
           </p>
-          {#if data.recruiter.open_jobs}<a
-              href={`/jobs?recruiter=${data.recruiter.recruiter.id}`}
-              class="button button_outline button_full"
-              >See their roles<Icon name="arrow-up-right" size={15} /></a
-            >{/if}
+          <a
+            href={`/recruiter/${data.recruiter.recruiter.id}?tab=jobs`}
+            class="button button_outline button_full"
+            >View profile<Icon name="arrow-up-right" size={15} /></a
+          >
         </section>{/if}
       <section class="detail_skills_card">
         <span class="eyebrow_label">THE CRAFT YOU’LL BRING</span>

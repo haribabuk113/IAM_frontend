@@ -3,9 +3,11 @@
   import Notice from "$lib/portal/preview_notice.svelte";
   import Empty from "$lib/portal/empty_state.svelte";
   import Job_card from "$lib/portal/job_card.svelte";
+  import Modal from "$lib/portal/modal.svelte";
+  import { rupees, request_topup } from "$lib/portal/payments.js";
   import { browser } from "$app/environment";
   import { page } from "$app/stores";
-  import { saved_jobs, saved_applied, unsave_jobs, clear_applied_saved } from "$lib/portal/state.js";
+  import { saved_jobs, saved_applied, unsave_jobs, clear_applied_saved, refresh_saved, toast } from "$lib/portal/state.js";
   import { jobs_api, to_card, to_criteria } from "$lib/portal/jobs_api.js";
   import { default_filters } from "$lib/portal/search.js";
   import { location_label, rates } from "$lib/portal/reference.js";
@@ -41,6 +43,48 @@
     .sort((a, b) => order.get(a.id) - order.get(b.id));
   $: all_selected = saved.length > 0 && saved.every((j) => selected.includes(j.id));
   $: signed_in = !!$page.data.user;
+  // Manual "Save jobs" §3: a dry run shows the free/paid split and fee; the
+  // real run applies to all of them or none. External jobs are logged as
+  // applied and their sites listed to finish on.
+  let plan = null; // the dry run's answer
+  let done = null; // { count, external: [{ title, url }] }
+  let applying = false;
+  const reasons = { not_open: "no longer open", already_applied: "already applied", own_job: "your own job" };
+  $: title_of = (id) => loaded.find((j) => j.id === id)?.title ?? "A job";
+  async function check_bulk() {
+    applying = true;
+    const result = await jobs_api.apply_bulk(selected, { dry_run: true });
+    applying = false;
+    if (!result.ok) return toast(result.error);
+    plan = result.data;
+  }
+  function drop_problems() {
+    const blocked = plan.problems.map((p) => p.job_id);
+    selected = selected.filter((id) => !blocked.includes(id));
+    plan = null;
+    if (selected.length) check_bulk();
+  }
+  async function submit_bulk() {
+    applying = true;
+    const result = await jobs_api.apply_bulk(selected, { confirm_paid_count: plan.paid });
+    applying = false;
+    plan = null;
+    if (result.status === 402)
+      return request_topup({
+        alert: `These applications need ${rupees(result.data?.fee_paise ?? 0)}. Top up your wallet to continue.`,
+        need_paise: (result.data?.fee_paise ?? 0) - (result.data?.balance_paise ?? 0),
+      });
+    if (!result.ok) return toast(result.error);
+    // Search doesn't return employer links; read them from each job.
+    const external = await Promise.all(
+      result.data.external.map(async (id) => ({ title: title_of(id), url: (await jobs_api.get(id)).data?.external_url })),
+    );
+    const applied = [...result.data.easy_apply, ...result.data.external];
+    loaded = loaded.filter((j) => !applied.includes(j.id));
+    selected = [];
+    done = { count: applied.length, external: external.filter((e) => e.url) };
+    refresh_saved();
+  }
 </script>
 
 <svelte:head><title>Saved jobs — Referise</title></svelte:head>
@@ -77,7 +121,11 @@
           unsave_jobs(selected);
           selected = [];
         }}>Unsave selected{selected.length ? ` (${selected.length})` : ""}</button
-      >
+      >{#if signed_in}<button
+          class="button button_dark button_small"
+          disabled={!selected.length || applying}
+          on:click={check_bulk}>{applying ? "Checking…" : `Apply to selected${selected.length ? ` (${selected.length})` : ""}`}</button
+        >{/if}
     </div>{/if}
   {#if load_error}<p class="auth_alert" role="alert">{load_error}</p>{/if}
   {#if saved.length}<div class="results_jobs grid_view">
@@ -97,6 +145,40 @@
       ><a class="button button_dark" href="/jobs">Find your next role ↗</a></Empty
     >{/if}
 </main>
+{#if plan}<Modal title="Apply to these jobs?" on:close={() => (plan = null)}
+    >{#if plan.problems.length}<p>These can’t be included:</p>
+      <ul>
+        {#each plan.problems as p}<li>{title_of(p.job_id)}: {reasons[p.reason] ?? p.reason}</li>{/each}
+      </ul>
+      <div class="form_actions">
+        <button class="button button_outline" on:click={() => (plan = null)}>Cancel</button
+        ><button class="button button_dark" disabled={applying} on:click={drop_problems}>Leave them out</button>
+      </div>{:else}<ul>
+        {#if plan.easy_apply.length}<li>
+            {plan.easy_apply.length} Easy Apply: {plan.free} free{plan.paid
+              ? `, ${plan.paid} paid (${rupees(plan.fee_paise)} from your wallet, balance ${rupees(plan.wallet_paise)})`
+              : ""}
+          </li>{/if}
+        {#if plan.external.length}<li>
+            {plan.external.length} on the employer’s site: marked as applied, with links to finish there.
+          </li>{/if}
+      </ul>
+      <div class="form_actions">
+        <button class="button button_outline" on:click={() => (plan = null)}>Cancel</button
+        ><button class="button button_dark" disabled={applying} on:click={submit_bulk}
+          >{applying ? "Applying…" : plan.paid ? `Apply and pay ${rupees(plan.fee_paise)}` : "Apply"}</button
+        >
+      </div>{/if}</Modal
+  >{/if}
+{#if done}<Modal title="Applications sent" on:close={() => (done = null)}
+    ><p>
+      Applied to {done.count} {done.count === 1 ? "job" : "jobs"}. Track them in <a href="/applications">your applications</a>.
+    </p>
+    {#if done.external.length}<p>Finish these on the employer’s site:</p>
+      <ul>
+        {#each done.external as e}<li><a href={e.url} target="_blank" rel="noopener noreferrer">{e.title} ↗</a></li>{/each}
+      </ul>{/if}</Modal
+  >{/if}
 
 <style>
   .saved_bulk_bar {

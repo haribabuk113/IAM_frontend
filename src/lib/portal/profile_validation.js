@@ -19,20 +19,30 @@ const arrays = {
   languages: (item) =>
     shape(item, [
       ["name", "string"],
-      ["proficiency", "string"],
+      ["read", "boolean"],
+      ["write", "boolean"],
+      ["speak", "boolean"],
     ]),
   experiences: (item) =>
     shape(item, [
       ["company", "string"],
-      ["title", "string"],
       ["type", "string"],
       ["start", "string"],
       ["end", "string"],
       ["current", "boolean"],
-      ["promoted", "boolean"],
-      ["description", "string"],
       ["verification", "string"],
-    ]),
+    ]) &&
+    Array.isArray(item.roles) &&
+    item.roles.every(
+      (role) =>
+        shape(role, [
+          ["title", "string"],
+          ["start", "string"],
+          ["end", "string"],
+          ["promoted", "boolean"],
+          ["responsibilities", "string"],
+        ]) && Array.isArray(role.achievements),
+    ),
   authorizations: (item) =>
     shape(item, [
       ["country", "string"],
@@ -112,6 +122,17 @@ export function profile_error(profile) {
     )
   )
     return "An experience cannot end before it starts.";
+  for (const entry of profile.experiences) {
+    if (!entry.roles?.length) return `Add at least one role at ${entry.company || "each company"}.`;
+    for (const role of entry.roles) {
+      if (!role.title.trim()) return `Give each role at ${entry.company || "this company"} a title.`;
+      if (!role.start || role.start < entry.start)
+        return `Each role at ${entry.company || "this company"} must start within the employment period.`;
+      const end = role.end || (entry.current ? "" : entry.end);
+      if (end && (end < role.start || (!entry.current && end > entry.end)))
+        return `Each role at ${entry.company || "this company"} must end within the employment period.`;
+    }
+  }
   if (
     profile.authorizations.some(
       (entry) => !entry.indefinite && entry.until < entry.from,

@@ -3015,3 +3015,11 @@
     scroll-behavior: auto !important;
   }
 }
+.landing_refresh .search_filters .company_industry {
+  font-size: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  max-width: 120px;
+  padding: 3px 0;
+}

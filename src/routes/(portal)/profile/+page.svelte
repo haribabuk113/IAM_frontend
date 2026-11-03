@@ -72,7 +72,8 @@
   import { designations as designation_terms } from "$lib/portal/reference.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
   import Delete_account from "$lib/portal/delete_account.svelte";
-  import { visibility_labels } from "$lib/portal/filter_options.js";
+  import { visibility_labels, work_types } from "$lib/portal/filter_options.js";
+  import Location_select from "$lib/portal/location_select.svelte";
   import { location_label, rates } from "$lib/portal/reference.js";
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
@@ -287,7 +288,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       return;
     }
-    const text = `${$profile.name}\n${$profile.title}\n${$profile.location}\n\nABOUT\n${$profile.about}\n\nSKILLS\n${$profile.skills.join(", ")}\n\nEXPERIENCE\n${$profile.experiences.map((entry) => `${entry.title}, ${entry.company} | ${entry.start} - ${entry.current ? "Present" : entry.end}`).join("\n")}\n\nThis is a sample resume from the Referise design preview.`;
+    const text = `${$profile.name}\n${$profile.title}\n${$profile.location}\n\nABOUT\n${$profile.about}\n\nSKILLS\n${$profile.skills.join(", ")}\n\nEXPERIENCE\n${$profile.experiences.map((entry) => `${entry.roles.at(-1)?.title ?? ""}, ${entry.company} | ${entry.start} - ${entry.current ? "Present" : entry.end}`).join("\n")}\n\nThis is a sample resume from the Referise design preview.`;
     const url = URL.createObjectURL(
       new Blob([text], { type: "text/plain;charset=utf-8" }),
     );
@@ -391,8 +392,17 @@
               {#each $profile.social_links as link}<Social_icon {link} />{/each}
             </div>{/if}
           <div class="profile_meta">
-            <span><Icon name="location" size={14} />{$profile.location}</span
-            ><span
+            {#if $profile.current_company}<span
+                ><Icon name="building" size={14} />{[
+                  $profile.current_company,
+                  $profile.current_work_arrangement,
+                  $profile.current_work_type,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}</span
+              >{/if}{#if $profile.location}<span
+                ><Icon name="location" size={14} />{$profile.location}</span
+              >{/if}<span
               ><Icon name="briefcase" size={14} />{$profile.experience} of experience</span
             ><span
               ><Icon name="globe" size={14} />{$profile.website ||
@@ -494,7 +504,7 @@
                   >
                   <div>
                     <div class="experience_title">
-                      <h3>{experience.title}</h3>
+                      <h3>{experience.company}</h3>
                       <span
                         >{month_label(experience.start)} — {experience.current
                           ? "Present"
@@ -502,7 +512,9 @@
                       >
                     </div>
                     <p class="experience_company">
-                      {experience.company} <span>{experience.type}</span><span
+                      {[experience.type, experience.work_arrangement, experience.location]
+                        .filter(Boolean)
+                        .join(" · ")}<span
                         >{#if experience.verification === "Verified"}<span
                             class="verified_employment"
                             ><Icon name="shield" size={13} />Employer verified</span
@@ -511,12 +523,24 @@
                             : experience.verification}{/if}</span
                       >
                     </p>
-                    {#if experience.promoted}<span class="promoted_tag"
-                        >Promoted</span
-                      >{/if}
-                    <p class="experience_description">
-                      {experience.description}
-                    </p>
+                    {#each experience.roles as role}<div class="experience_role">
+                        <div class="experience_title">
+                          <h4>{role.title}</h4>
+                          <span
+                            >{month_label(role.start)} — {role.end
+                              ? month_label(role.end)
+                              : "Present"}</span
+                          >
+                        </div>
+                        {#if role.promoted}<span class="promoted_tag">Promoted</span
+                          >{/if}
+                        {#if role.responsibilities}<p class="experience_description">
+                            {role.responsibilities}
+                          </p>{/if}
+                        {#if role.achievements.length}<ul class="experience_achievements">
+                            {#each role.achievements as achievement}<li>{achievement}</li>{/each}
+                          </ul>{/if}
+                      </div>{/each}
                     {#if !public_preview && experience.verification !== "Verified" && experience.verification !== "Pending"}<button
                         class="button button_outline button_small"
                         on:click={() => request_verification(experience_index)}
@@ -709,9 +733,10 @@
               <dt>Languages</dt>
               <dd>
                 {$profile.languages
-                  .map(
-                    (language) => `${language.name} · ${language.proficiency}`,
-                  )
+                  .map((language) => {
+                    const can = ["read", "write", "speak"].filter((k) => language[k]);
+                    return can.length ? `${language.name} (${can.join(", ")})` : language.name;
+                  })
                   .join(", ") || "Not added"}
               </dd>
             </div>
@@ -743,7 +768,14 @@
                     {education.institution}{education.institution
                       ? " · "
                       : ""}{education.field} · {education.start}–{education.end}
-                  </p>{:else}<p>Education not added.</p>{/each}
+                  </p>
+                  {#if education.grade || education.honors}<p>
+                      {[education.grade, education.honors].filter(Boolean).join(" · ")}
+                    </p>{/if}
+                  {#if education.description}<p>{education.description}</p>{/if}
+                  {#if education.achievements?.length}<ul class="experience_achievements">
+                      {#each education.achievements as achievement}<li>{achievement}</li>{/each}
+                    </ul>{/if}{:else}<p>Education not added.</p>{/each}
               </div>
             </div>
           </div>
@@ -944,12 +976,29 @@
               bind:value={draft.title}
             /></label
           ><label class="field_label"
-            >Location<input
+            >Current company · optional<input
               class="field_input"
-              required
-              bind:value={draft.location}
-              maxlength="80"
+              maxlength="150"
+              bind:value={draft.current_company}
             /></label
+          ><Location_select
+            label="Current work location"
+            bind:value={draft.current_location_id}
+          /><label class="field_label"
+            >Current work arrangement<select
+              class="field_input"
+              bind:value={draft.current_work_arrangement}
+              ><option value="">Not specified</option
+              >{#each ["On-site", "Hybrid", "Remote"] as mode}<option>{mode}</option
+                >{/each}</select
+            ></label
+          ><label class="field_label"
+            >Current work type<select
+              class="field_input"
+              bind:value={draft.current_work_type}
+              ><option value="">Not specified</option
+              >{#each work_types as type}<option>{type}</option>{/each}</select
+            ></label
           ><label class="field_label"
             >Email address<input
               class="field_input"
@@ -1057,8 +1106,8 @@
         <h3>About</h3>
         <p>{$profile.about}</p>
         <h3>Experience</h3>
-        {#each $profile.experiences as experience, experience_index}<strong
-            >{experience.title} · {experience.company}</strong
+        {#each $profile.experiences as experience}<strong
+            >{experience.roles.map((r) => r.title).join(" → ")} · {experience.company}</strong
           >
           <p>
             {month_label(experience.start)} — {experience.current

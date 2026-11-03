@@ -29,6 +29,8 @@ export const profile_api = {
   // data_url: the cropped photo (data:image/jpeg;base64,...)
   upload_photo: async (data_url) => call("/me/photo", { method: "PUT", image: await (await fetch(data_url)).blob() }),
   remove_photo: () => call("/me/photo", { method: "DELETE" }),
+  // { available } for a valid handle; 400 with the reason for a bad or reserved one.
+  slug_available: (slug) => call(`/me/slug-availability?slug=${encodeURIComponent(slug)}`),
   request_verification: (index) => call(`/me/experiences/${index}/verification`, { method: "POST" }),
   // Skill sync and the job page's one-click chips (see my_skills.js).
   skills: (signature) => call(`/me/skills?signature=${encodeURIComponent(signature)}`),

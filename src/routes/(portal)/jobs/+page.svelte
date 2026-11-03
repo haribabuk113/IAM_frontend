@@ -36,10 +36,12 @@
   import { jobs_api, to_card, to_criteria } from "$lib/portal/jobs_api.js";
   import { wallet_api, rupees, request_topup } from "$lib/portal/payments.js";
   import { onMount as on_mount } from "svelte";
+  import { skill_match } from "$lib/portal/membership_rules.js";
+  import { my_skill_names } from "$lib/portal/my_skills.js";
   import {
     saved_jobs,
     saved_searches,
-    applications,
+    recent_titles,
     search_filters,
     viewing_currency,
     toast,
@@ -145,7 +147,12 @@
     filters_to_params(filters).toString() !==
     filters_to_params(applied_filters).toString();
   $: page_count = Math.max(1, Math.ceil(total / page_size));
-  $: visible_jobs = page_jobs;
+  // ponytail: the search API has no min_match, so it filters the loaded page
+  // only (totals and paging count every job); move it server-side if needed.
+  $: visible_jobs =
+    effective_filters.min_match && $page.data.user
+      ? page_jobs.filter((j) => skill_match(j, $my_skill_names) >= effective_filters.min_match)
+      : page_jobs;
   $: active_filters = active_filter_labels(effective_filters);
   $: filter_count = active_filters.length;
   function sync() {
@@ -162,6 +169,8 @@
       $premium_active,
     );
     applied_filters = structuredClone(filters);
+    const title = filters.query.trim();
+    if (title) recent_titles.update((list) => [title, ...list.filter((t) => t.toLowerCase() !== title.toLowerCase())].slice(0, 5));
     search_filters.set(structuredClone(filters));
     viewing_currency.set(filters.currency);
     show_filters = false;
@@ -276,6 +285,14 @@
           >Find opportunities <Icon name="arrow-right" size={17} /></button
         >
       </form>
+      {#if $recent_titles.length}<div class="saved_search_row recent_titles">
+          <span>Recent</span>{#each $recent_titles as title}<a href={`/jobs?${new URLSearchParams({ q: title })}`}>{title}</a
+            >{/each}<button
+            type="button"
+            class="text_link"
+            on:click={() => recent_titles.set([])}>Clear</button
+          >
+        </div>{/if}
     </div>
   </section>
   <div class="portal_container search_workspace">
@@ -407,6 +424,7 @@
           {#each visible_jobs as job (job.id)}<Job_card
               {job}
               currency={applied_filters.currency}
+              salary_matched={effective_filters.min_salary > 0}
             />{/each}
         </div>
         <div class="pagination">
