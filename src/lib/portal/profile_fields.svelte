@@ -1,6 +1,8 @@
 <script>
-  import Location_picker from "./location_picker.svelte";
+  import Location_search from "./location_search.svelte";
   import Location_select from "./location_select.svelte";
+  import Country_select from "./country_select.svelte";
+  import { countries } from "./reference.js";
   import { profile_api } from "./profile_api.js";
   import {
     work_types,
@@ -269,7 +271,9 @@
       </div>
     </fieldset>
     <fieldset>
-      <legend>Preferred locations</legend><Location_picker
+      <legend>Preferred locations</legend><Location_search
+        label=""
+        allow_worldwide={false}
         bind:selected={draft.preferred_locations}
       /><label class="profile_field_check"
         ><input type="checkbox" bind:checked={draft.open_to_remote} />Open to
@@ -557,14 +561,11 @@
     {#each draft.authorizations as authorization, index}<fieldset>
         <legend>Authorization {index + 1}</legend>
         <div class="form_grid">
-          <label class="field_label"
-            >Country<input
-              class="field_input"
-              required
-              maxlength="80"
-              bind:value={authorization.country}
-            /></label
-          ><label class="field_label"
+          <Country_select
+            required
+            value={$countries.find((c) => c.name === authorization.country)?.code ?? ""}
+            on:change={(e) => (authorization.country = e.detail?.name ?? "")}
+          /><label class="field_label"
             >Authorization type<input
               class="field_input"
               required

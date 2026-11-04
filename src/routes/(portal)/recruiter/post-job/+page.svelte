@@ -13,7 +13,7 @@
   import { toast } from "$lib/portal/state.js";
   import Markdown_editor from "$lib/portal/markdown_editor.svelte";
   import Heading from "$lib/portal/page_heading.svelte";
-  import Location_picker from "$lib/portal/location_picker.svelte";
+  import Location_search from "$lib/portal/location_search.svelte";
   import Modal from "$lib/portal/modal.svelte";
   let form = { ...new_job_form(), relocation: "On their own" };
   let stages = "";
@@ -368,10 +368,10 @@
             /></label
           >
           <fieldset>
-            <legend>Eligible work locations *</legend><Location_picker
+            <legend>Eligible work locations *</legend><Location_search
+              label=""
               bind:selected={form.locations}
               bind:worldwide={form.worldwide}
-              allow_worldwide
             />
           </fieldset>
         </section>

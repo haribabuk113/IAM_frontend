@@ -111,18 +111,6 @@
   background: transparent;
   color: inherit;
 }
-.location_actions {
-  display: flex;
-  gap: 14px;
-}
-.location_actions button {
-  font-size: 11px;
-  color: #3155ef;
-  background: none;
-  border: 0;
-  padding: 4px 0;
-  cursor: pointer;
-}
 .advanced_search_link {
   background: none;
   border: 0;

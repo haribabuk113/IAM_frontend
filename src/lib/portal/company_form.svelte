@@ -6,7 +6,7 @@
   import { companies_api, image_url } from "./companies_api.js";
   import Image_field from "./image_field.svelte";
   import Heading from "./page_heading.svelte";
-  import Location_picker from "./location_picker.svelte";
+  import Location_search from "./location_search.svelte";
   export let editing = false;
   import { company_sizes as sizes } from "./filter_options.js";
   const social_fields = [["linkedin", "LinkedIn"], ["x", "X / Twitter"], ["github", "GitHub or tech blog"], ["glassdoor", "Glassdoor or Crunchbase"]];
@@ -217,7 +217,11 @@
         <p class="form_caption">
           Choose one headquarters city. Other offices can be added below.
         </p>
-        <Location_picker bind:selected={form.headquarters} /><label
+        <Location_search
+          label="Headquarters"
+          allow_worldwide={false}
+          bind:selected={form.headquarters}
+        /><label
           class="field_label"
           >Street address<input
             class="field_input"
@@ -226,7 +230,9 @@
           /></label
         >
         <details class="filter_disclosure">
-          <summary>Branch locations</summary><Location_picker
+          <summary>Branch locations</summary><Location_search
+            label=""
+            allow_worldwide={false}
             bind:selected={form.branches}
           />
         </details>
