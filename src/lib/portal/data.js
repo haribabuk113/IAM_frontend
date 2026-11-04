@@ -458,6 +458,7 @@ export const jobs = job_fixtures.map((job, index) => ({
 }));
 export const default_profile = {
   photo: "",
+  resume: null,
   skill_groups: [],
   target_roles: ["senior-product-designer"],
   education: [

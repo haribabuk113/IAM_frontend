@@ -401,8 +401,17 @@
           <div class="filter_chips">
             {#each candidate.dossier.skills as skill}<span class="workspace_badge">{skill}</span>{/each}
           </div>{/if}
+        {#if candidate.has_resume}<p class="dossier_about">
+            <a class="text_action" href={`/recruiter/applications/${candidate.id}/resume`} target="_blank"
+              rel="noopener noreferrer">View résumé ↗</a
+            > · <a class="text_action" href={`/recruiter/applications/${candidate.id}/resume?mode=download`}
+              >Download</a
+            >
+          </p>{/if}
         <div class="workspace_hint">
-          A snapshot of the candidate’s profile when they applied. Résumé files aren’t stored yet.
+          A snapshot of the candidate’s profile when they applied.{candidate.has_resume
+            ? " The résumé is their current one."
+            : " No résumé uploaded."}
         </div>
       </div>
       <dl class="facts_list">

@@ -11,7 +11,6 @@ export const application_snapshots = writable([]);
 export const saved_searches = writable([]);
 export const recent_titles = writable([]); // last few job-title searches (manual "Search jobs" §2.1)
 export const profile = writable(structuredClone(default_profile));
-export const resume_file = writable(null);
 export const notification = writable("");
 let hydrated = false;
 let timer;

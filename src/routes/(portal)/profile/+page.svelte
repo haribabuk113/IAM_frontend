@@ -33,31 +33,17 @@
         ($rates[$viewing_currency] ?? 1),
     );
   async function copy_resume() {
-    if ($profile.resume_visibility !== "all") {
-      toast(
-        "Make your résumé public in Preferences before sharing its preview link.",
-      );
+    if ($profile.resume_visibility !== "all" || !$profile.visible) {
+      toast("Make your profile and résumé public in Preferences before sharing the résumé link.");
       return;
     }
-    share_url = `${window.location.origin}/profile?public=1&resume=1`;
+    share_url = window.location.origin + resume_link($profile.slug);
     try {
       await navigator.clipboard.writeText(share_url);
-      toast(
-        "Résumé preview link copied. Uploaded files are only available in this browser session.",
-      );
+      toast("Résumé link copied.");
     } catch {
       sharing = true;
     }
-  }
-  let resume_query_seen = false;
-  $: if (
-    $page.url.searchParams.get("resume") === "1" &&
-    !resume_query_seen &&
-    $profile.resume_visibility === "all" &&
-    $profile.visible
-  ) {
-    resume_open = true;
-    resume_query_seen = true;
   }
 
   import { page } from "$app/stores";
@@ -67,7 +53,15 @@
   import Profile_skills from "$lib/portal/profile_skills.svelte";
   import Profile_projects from "$lib/portal/profile_projects.svelte";
   import Profile_photo from "$lib/portal/profile_photo.svelte";
-  import { profile_api, to_store, regroup, availability_text } from "$lib/portal/profile_api.js";
+  import {
+    profile_api,
+    to_store,
+    regroup,
+    availability_text,
+    resume_link,
+    resume_type,
+    resume_max_bytes,
+  } from "$lib/portal/profile_api.js";
   import { sync_my_skills } from "$lib/portal/my_skills.js";
   import { designations as designation_terms } from "$lib/portal/reference.js";
   import Profile_fields from "$lib/portal/profile_fields.svelte";
@@ -78,13 +72,13 @@
   import Icon from "$lib/portal/icon.svelte";
   import Companion from "$lib/portal/companion.svelte";
   import Modal from "$lib/portal/modal.svelte";
-  import { profile, resume_file, toast } from "$lib/portal/state";
+  import { profile, toast } from "$lib/portal/state";
   import { default_profile } from "$lib/portal/data";
   export let data;
   // The server's copy is the truth; the store feeds the profile components.
   $: profile.set(to_store(data.profile));
   let editing = "";
-  let resume_url = "";
+  let resume_busy = false;
   let draft = to_store(data.profile);
   let saving = false;
   let skill_text = "";
@@ -92,14 +86,9 @@
   let resume_open = false;
   let sharing = false;
   let share_url = "";
-  $: if ($resume_file && !resume_url)
-    resume_url = URL.createObjectURL($resume_file);
   // The profile store also backs signed-out match previews: don't leave a
   // visited profile in it.
   on_destroy(() => data.visitor && profile.set(structuredClone(default_profile)));
-  on_destroy(() => {
-    if (resume_url) URL.revokeObjectURL(resume_url);
-  });
   // Who sees each restricted field: everyone, or only recruiters of jobs you
   // apply to; your current salary can also be hidden from everyone.
   const visibility_options = [
@@ -261,40 +250,54 @@
         })
       : "";
   }
-  function upload_resume(event) {
-    const file = event.currentTarget.files?.[0];
-    if (!file) return;
-    if (
-      !/\.(pdf|docx)$/i.test(file.name) ||
-      file.size > 5 * 1024 * 1024 ||
-      file.size === 0
-    ) {
+  async function upload_resume(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file || resume_busy) return;
+    if (!resume_type(file.name) || file.size > resume_max_bytes || file.size === 0) {
       toast("Choose a PDF or DOCX file, up to 5 MB.");
-      event.currentTarget.value = "";
       return;
     }
-    if (resume_url) URL.revokeObjectURL(resume_url);
-    resume_file.set(file);
-    resume_url = URL.createObjectURL(file);
-    toast("Résumé ready for this session. File hosting is not connected yet.");
+    if (!$profile.saved) {
+      toast("Save your profile once before uploading a résumé.");
+      return;
+    }
+    resume_busy = true;
+    const result = await profile_api.upload_resume(file);
+    resume_busy = false;
+    if (!result.ok) {
+      toast(result.error || "Could not upload your résumé. Try again.");
+      return;
+    }
+    profile.set(to_store(result.data));
+    toast("Résumé uploaded.");
   }
-  function download_resume() {
-    if ($resume_file) {
-      const url = URL.createObjectURL($resume_file);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = $resume_file.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function remove_resume() {
+    if (resume_busy) return;
+    resume_busy = true;
+    const result = await profile_api.remove_resume();
+    resume_busy = false;
+    if (!result.ok) {
+      toast(result.error || "Could not remove your résumé. Try again.");
       return;
     }
-    const text = `${$profile.name}\n${$profile.title}\n${$profile.location}\n\nABOUT\n${$profile.about}\n\nSKILLS\n${$profile.skills.join(", ")}\n\nEXPERIENCE\n${$profile.experiences.map((entry) => `${entry.roles.at(-1)?.title ?? ""}, ${entry.company} | ${entry.start} - ${entry.current ? "Present" : entry.end}`).join("\n")}\n\nThis is a sample resume from the Referise design preview.`;
+    profile.set(to_store(result.data));
+    resume_open = false;
+    toast("Résumé removed.");
+  }
+  $: resume_details = $profile.resume
+    ? `${$profile.resume.format.toUpperCase()} · uploaded ${new Date($profile.resume.uploaded_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}`
+    : "";
+  // Without an uploaded file: the profile overview as plain text.
+  function download_resume() {
+    const text = `${$profile.name}\n${$profile.title}\n${$profile.location}\n\nABOUT\n${$profile.about}\n\nSKILLS\n${$profile.skills.join(", ")}\n\nEXPERIENCE\n${$profile.experiences.map((entry) => `${entry.roles.at(-1)?.title ?? ""}, ${entry.company} | ${entry.start} - ${entry.current ? "Present" : entry.end}`).join("\n")}`;
     const url = URL.createObjectURL(
       new Blob([text], { type: "text/plain;charset=utf-8" }),
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${$profile.name.replace(/[^a-z0-9]/gi, "_")}_resume_preview.txt`;
+    link.download = `${$profile.name.replace(/[^a-z0-9]/gi, "_")}_profile_summary.txt`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -422,12 +425,12 @@
           >{#if $profile.phone}<a href={`tel:${$profile.phone}`}
               >{$profile.phone}</a
             >{/if}{/if}
-        {#if !visitor && shows("resume_visibility")}<button
+        {#if (!visitor || $profile.resume) && shows("resume_visibility")}<button
             class="text_link"
             on:click={() => (resume_open = true)}>View résumé ↗</button
           >{/if}
         <button class="text_link" on:click={share}>Copy profile link</button>
-        {#if !visitor && shows("resume_visibility")}<button
+        {#if !visitor && $profile.resume && shows("resume_visibility")}<button
             class="text_link"
             on:click={copy_resume}>Copy résumé link</button
           >{/if}
@@ -437,7 +440,7 @@
           >{/if}
       </div>
       {#if !public_preview}<p class="profile_link_note">
-          Your profile link opens your public profile. Résumé files aren’t stored yet.
+          Your profile link opens your public profile.
         </p>{/if}
       <div class="profile_navigation">
         <nav aria-label="Profile sections">
@@ -883,7 +886,7 @@
               </div>{/if}
           </dl>
         </section>
-        {#if !visitor && shows("resume_visibility")}<section
+        {#if (!visitor || $profile.resume) && shows("resume_visibility")}<section
             class="profile_side_card resume_card"
           >
             <div class="side_card_heading">
@@ -896,9 +899,7 @@
               >
               <div>
                 <strong>{$profile.name.split(" ")[0]}’s résumé</strong><span
-                  >{$resume_file
-                    ? $resume_file.name
-                    : "Sample document · Profile overview"}</span
+                  >{$profile.resume ? resume_details : "No file yet · showing your profile overview"}</span
                 >
               </div>
             </div>
@@ -909,15 +910,19 @@
             >{#if !public_preview}<label
                 class="field_label"
                 style="margin-top: 14px"
-                >Upload résumé<input
+                >{$profile.resume ? "Replace résumé" : "Upload résumé"}<input
                   type="file"
-                  accept=".pdf,.docx"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  disabled={resume_busy}
                   on:change={upload_resume}
                 /><small
-                  >PDF or DOCX · up to 5 MB. Kept for this session only; a
-                  shareable file URL requires storage integration.</small
+                  >{resume_busy ? "Working…" : "PDF or DOCX · up to 5 MB."}</small
                 ></label
-              >
+              >{#if $profile.resume}<button
+                  class="text_link"
+                  disabled={resume_busy}
+                  on:click={remove_resume}>Remove résumé</button
+                >{/if}
               <p class="resume_privacy">
                 <Icon name="lock" size={11} />{$profile.resume_visibility === "all"
                   ? "Visible on your public profile"
@@ -1088,12 +1093,12 @@
     title="Your experience, at a glance."
     wide
     on:close={() => (resume_open = false)}
-    >{#if $resume_file}<div class="resume_preview">
-        <h2>{$resume_file.name}</h2>
-        <p>Uploaded for this browser session.</p>
-        {#if $resume_file.type === "application/pdf"}<a
+    >{#if $profile.resume}<div class="resume_preview">
+        <h2>{$profile.name.split(" ")[0]}’s résumé</h2>
+        <p>{resume_details}</p>
+        {#if $profile.resume.format === "pdf"}<a
             class="text_link"
-            href={resume_url}
+            href={resume_link($profile.slug)}
             target="_blank"
             rel="noopener noreferrer">Open PDF ↗</a
           >{:else}<p>
@@ -1123,10 +1128,11 @@
       </div>
     {/if}
     <div class="form_actions">
-      <button class="button button_dark" on:click={download_resume}
-        >{$resume_file ? "Download résumé" : "Download sample text résumé"}
-        <Icon name="download" size={16} /></button
-      >
+      {#if $profile.resume}<a class="button button_dark" href={resume_link($profile.slug, "download")}
+          >Download résumé <Icon name="download" size={16} /></a
+        >{:else}<button class="button button_dark" on:click={download_resume}
+          >Download profile summary (text) <Icon name="download" size={16} /></button
+        >{/if}
     </div></Modal
   >{/if}
 {#if sharing}<Modal
